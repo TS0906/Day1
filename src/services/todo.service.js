@@ -9,11 +9,16 @@ class TodoService {
     }
 
     init(){
-        this.db = GET_DB();
-        this.collection = this.db.collection('todos');
+        try{
+            this.db = GET_DB();
+            this.collection = this.db.collection('todos');
+        } catch(error){
+            console.log('Init todos failed!', error.message);
+        }
     }
     async createTodo(todoData, userId) {
         try {
+            if(!this.collection) this.init();
             const validation = validateTodo(todoData);
             if (!validation.isValid) {
                 return { success: false, errors: validation.errors };
@@ -46,6 +51,8 @@ class TodoService {
 
     async getTodosByUserId(userId, page = 1, limit = 10) {
         try {
+            if(!this.collection) this.init();
+
             const skip = (page - 1) * limit;
             
             const todos = await this.collection
@@ -78,6 +85,8 @@ class TodoService {
 
     async getTodoById(todoId, userId) {
         try {
+            if(!this.collection) this.init();
+
             const todo = await this.collection.findOne({
                 _id: new ObjectId(todoId),
                 user_id: new ObjectId(userId) 
@@ -100,6 +109,8 @@ class TodoService {
 
     async updateTodo(todoId, userId, updateData) {
         try {
+            if(!this.collection) this.init();
+
             const validation = validateTodo(updateData);
             if (!validation.isValid) {
                 return { success: false, errors: validation.errors };
@@ -136,6 +147,8 @@ class TodoService {
 
     async deleteTodo(todoId, userId) {
         try {
+            if(!this.collection) this.init();
+
             const result = await this.collection.findOneAndDelete({
                 _id: new ObjectId(todoId),
                 user_id: new ObjectId(userId)
@@ -158,6 +171,8 @@ class TodoService {
 
     async toggleTodo(todoId, userId) {
         try {
+            if(!this.collection) this.init();
+            
             const todo = await this.collection.findOne({
                 _id: new ObjectId(todoId),
                 user_id: new ObjectId(userId) 

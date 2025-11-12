@@ -14,6 +14,7 @@ export const authToken = async (req, res, next) => {
         }
 
         const tokenResult = verifyToken(token);
+
         if (!tokenResult.success) {
             return res.status(401).json({ 
                 success: false,
@@ -35,7 +36,7 @@ export const authToken = async (req, res, next) => {
         req.userId = userId; 
         
         next();
-    } catch{
+    } catch(error){
         return res.status(500).json({
             success: false,
             error: "Failed"
