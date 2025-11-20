@@ -6,7 +6,7 @@ export const validateRegister = (userData) => {
     if(!userData.name||userData.name.trim().length < 2) {
           errors.push("Ten qua ngan");
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; //ky tu dac biet
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; 
     if(!userData.email || !emailRegex.test(userData.email)){
           errors.push("email chua hop le");
     }

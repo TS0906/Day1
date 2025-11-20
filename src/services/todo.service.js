@@ -160,56 +160,45 @@ class TodoService {
         try{
             if(!this.collection) this.init();
 
+            const todoObjectId = new ObjectId(todoId);
+
             const todo = await this.collection.findOne({
-                _id: new ObjectId(todoId)
+                _id: todoObjectId
             });
 
             if(!todo){
-                return{success: false, errors: 'Todo khong ton tai'};
+                return {success: false, errors: ['Todo khong ton tai']};
             }
 
             let hasPermission = false;
 
-            if(userRole === 'admin'){
-                hasPermission = true;
-            }
+            if(todo.group_id){
+                const group = await this.groupCollection.findOne({_id: todo.group_id});
 
-            else if(todo.group_id){
-                const group = await this.groupCollection.findOne({
-                    _id: todo.group_id
-                });
-                
-                if (!group) {
-                    return { success: false, errors: 'Nhom lien ket voi Todo khong ton tai.' };
+                if(!group){
+                    return {success: false, errors: 'Nhom lien ket voi Todo khong ton tai'};
                 }
-                
+
                 const userMembership = group.members.find(
                     member => member.user_id.toString() === userId
                 );
 
-
-                if (updateData.completed !== undefined) {
-                    // Yêu cầu: User có quyền mới đổi được trạng thái. 
-                    if (group.owner_id.toString() === userId) {
+                if(updateData.completed !== undefined){ //updateStatus: chi owner hoac admin
+                    if(group.owner_id.toString() === userId){
                         hasPermission = true;
-                    } else if (userMembership && userMembership.role === 'admin') {
+                    }else if(userMembership && userMembership.role === 'admin'){
                         hasPermission = true;
-                    } else {
-                        hasPermission = false; 
-                    }
-                    
-                } 
-                else {
-   
-                    if (todo.user_id.toString() === userId) { 
+                    } else{
+                        hasPermission = false;
+                    }                 
+                } else{
+                    if(todo.user_id.toString()===userId){
                         hasPermission = true;
-                    } else if (group.owner_id.toString() === userId || (userMembership && userMembership.role === 'admin')) {
+                    } else if(group.owner_id.toString() === userId || (userMembership && userMembership.role === 'admin')){
                         hasPermission = true;
                     }
                 }
-                
-            }
-            else{
+            }else{
                 hasPermission = todo.user_id.toString() === userId;
             }
 
@@ -220,7 +209,7 @@ class TodoService {
             delete updateData._id; 
 
             const result = await this.collection.findOneAndUpdate(
-                {_id: new ObjectId(todoId)},
+                {_id: todoObjectId},
                 {
                     $set: {
                         ...updateData,
@@ -236,17 +225,38 @@ class TodoService {
         }
     }
 
-    async getTodoById(todoId, userId) {
+    async getTodoById(todoId, userId, userRole) {
         try {
-            if(!this.collection) this.init();
+            if(!this.collection) this.init()
 
-            const todo = await this.collection.findOne({
-                _id: new ObjectId(todoId),
-                user_id: new ObjectId(userId) 
-            });
+            let query = {_id: todoObjectId};
+
+            const todo = await this.collection.findOne({query});
 
             if (!todo) {
-                return { success: false, errors: ["Todo not found"] };
+                return { success: false, errors: ["Todo khong tim thay"] };
+            }
+
+            let hasPermission = false;
+
+            if(todo.group_id){
+                const group = await this._checkGroupMembership(todo.group_id.toString(), userId);
+                hasPermission = !!group || userRole === 'admin';
+            }
+
+            if(userRole === 'admin'){
+                hasPermission = true; //admin khong duoc xem todo ca nhan, chi duoc xem todo chung
+            }
+
+            if(todo.group_id){
+                const group = await this._checkGroupMembership(todo.group_id.toString(), userId);
+                hasPermission = !!group;
+            } else{ //todo ca nhan chi co chu so huu xem
+                hasPermission = todo.user_id.toString() === userId;
+            }
+
+            if(!hasPermission){
+                return{success: false, errors: ["Khong co quyen truy cap todo nay"]};
             }
 
             return {
@@ -255,7 +265,6 @@ class TodoService {
             };
 
         } catch (error) {
-            console.error("Get todo by id error:", error);
             return { success: false, errors: [error.message] };
         }
     }
