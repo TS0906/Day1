@@ -37,6 +37,32 @@ export const validateTodo = (todoData) => {
           errors
      }
 }
+
+export const validateGroup = (groupData) => {
+     const errors = [];
+
+     if(!groupData?.name || groupData.name.trim().length === 0){
+          errors.push("Ten nhom khong duoc de trong");
+     }
+
+     if(groupData.name && groupData.name.length > 100){
+          errors.push("Ten nhom qua dai");
+     }
+
+     return {isValid: errors.length === 0, errors};
+}
+
+export const validateInvitation = (invitationData) => {
+     const errors = [];
+
+     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+     if(!invitationData?.email || !emailRegex.test(invitationData.email)){
+          errors.push("Email khong hop le");
+     }
+
+     return {isValid: errors.length === 0, errors};
+}
+
 export const hashPassword = async(password) => {
      const saltRounds = 10
      return await bcrypt.hash(password, saltRounds);

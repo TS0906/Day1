@@ -33,7 +33,7 @@ export const authController = {
                     success: true,
                     ...result.data
                 });
-                } else {
+            } else {
                 res.status(401).json({
                     success: false,
                     errors: result.errors
@@ -52,12 +52,55 @@ export const authController = {
                 success: true,
                 data: {
                     user: {
-                        id: req.user._id,
+                        id: req.userId,
                         name: req.user.name,
-                        email: req.user.email
+                        email: req.user.email,
+                        role: req.user.role
                     }
                 }
             });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: "Error"
+            });
+        }
+    },
+    getAllUsers: async (req, res) => {
+        try {
+            const result = await authService.getAllUsers();
+            if (result.success) {
+                res.json({
+                    success: true,
+                    data: result.data
+                });
+            } else {
+                res.status(400).json({
+                    success: false,
+                    errors: result.errors
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: "Error"
+            });
+        }
+    },
+    updateUserRole: async (req, res) => {
+        try {
+            const result = await authService.updateUserRole(req.params.id, req.body.role);
+            if (result.success) {
+                res.json({
+                    success: true,
+                    data: result.data
+                });
+            } else {
+                res.status(400).json({
+                    success: false,
+                    errors: result.errors
+                });
+            }
         } catch (error) {
             res.status(500).json({
                 success: false,

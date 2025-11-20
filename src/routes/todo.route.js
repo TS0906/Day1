@@ -7,15 +7,12 @@ const router = express.Router();
 router.use(authToken);
 
 router.post('/', todoController.createTodo);
-
-router.get('/', todoController.getTodos);
-
+router.get('/', todoController.getMyTodos);
 router.get('/:id', todoController.getTodoById);
-
-router.put('/:id', todoController.updateTodo);
-
+router.patch('/:id', todoController.updateTodo);
 router.delete('/:id', todoController.deleteTodo);
 
-router.patch('/:id/toggle', todoController.toggleTodo);
+router.post('/groups/:groupId', todoController.createGroupTodo);
+router.get('/groups/:groupId', todoController.getGroupTodos);
 
 export default router;

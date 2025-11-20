@@ -9,7 +9,7 @@ export const authToken = async (req, res, next) => {
         if (!token) {
             return res.status(401).json({ 
                 success: false,
-                error: "Token khong hop le" 
+                error: "Khong co token" 
             });
         }
 
@@ -33,7 +33,8 @@ export const authToken = async (req, res, next) => {
         }
 
         req.user = user;
-        req.userId = userId; 
+        req.userId = userId;
+        req.userRole = user.role; 
         
         next();
     } catch(error){

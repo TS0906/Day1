@@ -25,48 +25,16 @@ export const todoController = {
         }
     },
 
-    getTodos: async (req, res) => {
+    createGroupTodo: async (req, res) => {
         try {
-            const { page = 1, limit = 10 } = req.query;
-            const result = await todoService.getTodosByUserId(
-                req.userId, 
-                parseInt(page), 
-                parseInt(limit)
-            );
-            
+            const result = await todoService.createGroupTodo(req.body, req.params.groupId, req.userId);
             if (result.success) {
-                res.json({
-                    success: true,
-                    data: {
-                        todos: result.data,
-                        pagination: result.pagination
-                    }
-                });
-            } else {
-                res.status(500).json({
-                    success: false,
-                    errors: result.errors
-                });
-            }
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: "Internal server error"
-            });
-        }
-    },
-
-    getTodoById: async (req, res) => {
-        try {
-            const result = await todoService.getTodoById(req.params.id, req.userId);
-            
-            if (result.success) {
-                res.json({
+                res.status(201).json({
                     success: true,
                     data: result.data
                 });
             } else {
-                res.status(404).json({
+                res.status(400).json({
                     success: false,
                     errors: result.errors
                 });
@@ -74,19 +42,34 @@ export const todoController = {
         } catch (error) {
             res.status(500).json({
                 success: false,
-                error: "Internal server error"
+                error: "Error"
             });
         }
     },
 
-    updateTodo: async (req, res) => {
+    getMyTodos: async (req, res) => {
         try {
-            const result = await todoService.updateTodo(
-                req.params.id, 
-                req.userId, 
-                req.body
+            const { page = 1, limit = 10 } = req.query;
+
+            const result = await todoService.getTodosByUserId(
+                req.userId,
+                parseInt(page),
+                parseInt(limit)
             );
-            
+
+            if (result.success) {
+                res.json({ success: true, data: result.data });
+            } else {
+                res.status(400).json({ success: false, errors: result.errors });
+            }
+        } catch (error) {
+            res.status(500).json({ success: false, error: "Error" });
+        }
+    },
+
+    getGroupTodos: async (req, res) => {
+        try {
+            const result = await todoService.getGroupTodos(req.params.groupId, req.userId, req.user.role);
             if (result.success) {
                 res.json({
                     success: true,
@@ -101,38 +84,14 @@ export const todoController = {
         } catch (error) {
             res.status(500).json({
                 success: false,
-                error: "Internal server error"
+                error: "Error"
             });
         }
     },
 
-    deleteTodo: async (req, res) => {
+    updateTodo: async (req, res) => {
         try {
-            const result = await todoService.deleteTodo(req.params.id, req.userId);
-            
-            if (result.success) {
-                res.json({
-                    success: true,
-                    message: result.message
-                });
-            } else {
-                res.status(404).json({
-                    success: false,
-                    errors: result.errors
-                });
-            }
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: "Internal server error"
-            });
-        }
-    },
-
-    toggleTodo: async (req, res) => {
-        try {
-            const result = await todoService.toggleTodo(req.params.id, req.userId);
-            
+            const result = await todoService.updateTodo(req.params.id, req.userId, req.userRole, req.body);
             if (result.success) {
                 res.json({
                     success: true,
@@ -148,6 +107,49 @@ export const todoController = {
             res.status(500).json({
                 success: false,
                 error: "Error"
+            });
+        }
+    },
+
+    deleteTodo: async (req, res) => {
+        try {
+            const result = await todoService.deleteTodo(req.params.id, req.userId, req.userRole);
+            if (result.success) {
+                res.json({
+                    success: true,
+                    message: result.message
+                });
+            } else {
+                res.status(404).json({
+                    success: false,
+                    errors: result.errors
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: "Loi"
+            });
+        }
+    },
+    getTodoById: async (req, res) => {
+        try {
+            const result = await todoService.getTodoById(req.params.id, req.userId, req.userRole);
+            if (result.success) {
+                res.json({
+                    success: true,
+                    data: result.data
+                });
+            } else {
+                res.status(404).json({
+                    success: false,
+                    errors: result.errors
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: "Loi"
             });
         }
     }

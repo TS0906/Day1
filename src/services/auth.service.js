@@ -1,5 +1,5 @@
     import { GET_DB } from "../config/db.js";
-    import { ObjectId } from "mongodb";
+    import { ObjectId, ReturnDocument } from "mongodb";
     import { validateLogin,  validateRegister, hashPassword, comparePassword} from "../utils/validators.js";
     import { genToken } from "../utils/jwt.js";
 
@@ -14,7 +14,7 @@
                 this.collection = this.db.collection('users'); 
                 console.log('Connected');
             } catch(error){
-                console.error('Failed');
+                console.error('Failed', error);
             }
         }
 
@@ -37,6 +37,7 @@
                     name: userData.name.trim(),
                     email: userData.email.toLowerCase(),
                     password: hashedPassword,
+                    role: 'user',
                     created_at: new Date(), 
                     updated_at: new Date()  
                 }
@@ -44,7 +45,7 @@
                 const result = await this.collection.insertOne(user);
                 const userId = result.insertedId.toString();
 
-                const token = genToken(userId);
+                const token = genToken(userId, user.role);
 
                 return {
                     success: true,
@@ -53,6 +54,7 @@
                             id: userId,
                             name: user.name,
                             email: user.email,
+                            role: user.role
                         },
                         token
                     }
@@ -84,7 +86,7 @@
                 }
 
                 const userId = user._id.toString();
-                const token = genToken(userId);
+                const token = genToken(userId, user.role);
 
                 return {
                     success: true,
@@ -93,6 +95,7 @@
                             id: userId, 
                             name: user.name,
                             email: user.email,
+                            role: user.role
                         }, token
                     }
                 }
@@ -112,6 +115,45 @@
             } catch (error) {
                 console.error("Get user by id error:", error);
                 return null;
+            }
+        }
+        async getAllUsers(){
+            try{
+                if(!this.collection) this.init();
+
+                const users = await this.collection
+                    .find({}, {protjection: {password: 0}})
+                    .sort({created_at: -1})
+                    .toArray();
+
+                return {success: true, data: users};
+            } catch(error){
+                return{success: false, errors: 'Error'};
+            }
+        }
+        async updateUserRole(userId, newRole){
+            try{
+                if(!this.collection) this.init();
+
+                const result = await this.collection.findOneAndUpdate(
+                    {_id: new ObjectId(userId)},
+                    {
+                        $set:{
+                            role: newRole,
+                            updated_at: new Date()
+                        }
+                    },
+                    {returnDocument: 'after', projection: {password: 0}}
+                )
+
+                if(!result.value){
+                    return{success: false, errors: ['Nguoi dung khong ton tai']};
+                }
+
+                return {success: true, data: result.value};
+            } catch(error){
+                console.error("Loi update UserRole", error);
+                return{success: false, error: 'Error'};
             }
         }
     }
