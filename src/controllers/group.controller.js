@@ -150,5 +150,37 @@ export const groupController = {
                 error: "Loi"
             });
         }
+    },
+    setGroupPermissions: async(req, res) => {
+        try{
+            const groupId = req.params.groupId || req.params.id;
+            const targetUserId = req.body.userId;
+            const newPermissions = req.body.permissions;
+
+            const result = await groupService.setGroupPermissions(
+                groupId,
+                req.userId,
+                targetUserId,
+                newPermissions
+            );
+
+            if(result.success){
+                res.status(200).json({
+                    success: true,
+                    data: result.data
+                });
+            } else{
+                const statusCode = result.errors.includes('Khong co quyen') ? 403 : 400;
+                res.status(statusCode).json({
+                    success: false,
+                    errors: result.errors
+                });
+            }
+        }catch(error){
+            res.status(500).json({
+                success: false,
+                error: "Loi"
+            });
+        }
     }
 }

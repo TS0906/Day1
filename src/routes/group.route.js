@@ -13,6 +13,7 @@ router.get('/:id', groupController.getGroupById);
 router.put('/:id', groupController.updateGroup);
 router.delete('/:id', groupController.deleteGroup);
 router.post('/:id/leave', groupController.leaveGroup);
+router.post('/groups/:groupId/permissions', groupController.setPermissions);
 
 router.get('/admin', requireAdmin, groupController.getAllGroups);
 
