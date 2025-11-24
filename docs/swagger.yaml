@@ -99,7 +99,8 @@ components:
         description:
           type: string
           example: "Team for development projects"
-        owner_id:
+        # ✨ Đã sửa: owner_id thành ownerId để đồng bộ với Service
+        ownerId: 
           type: string
           example: "507f1f77bcf86cd799439011"
         members:
@@ -118,9 +119,11 @@ components:
         created_at:
           type: string
           format: date-time
+          example: "2023-10-01T10:00:00Z"
         updated_at:
           type: string
           format: date-time
+          example: "2023-10-01T10:00:00Z"
 
     Invitation:
       type: object
@@ -150,13 +153,14 @@ components:
               type: string
             description:
               type: string
-          additionalProperties:
-            type: object
-            properties:
-              name:
-                type: string
-              email:
-                type: string
+        # ✨ Lưu ý: 'inviter' được đặt sai vị trí trong bản gốc, đã sửa cấu trúc
+        inviter: 
+          type: object
+          properties:
+            name:
+              type: string
+            email:
+              type: string
 
     Error:
       type: object
@@ -211,7 +215,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         400:
-          description: Lỗi validation
+          description: Lỗi validation hoặc user đã tồn tại
           content:
             application/json:
               schema:
@@ -271,7 +275,7 @@ paths:
                       user:
                         $ref: '#/components/schemas/User'
         401:
-          description: Chưa đăng nhập
+          description: Chưa đăng nhập hoặc token không hợp lệ
           content:
             application/json:
               schema:
@@ -346,8 +350,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        404:
-          description: User không tồn tại
+        400: # ✨ Đã sửa: Theo Controller, lỗi Service (ID không hợp lệ/User không tồn tại) trả về 400
+          description: ID không hợp lệ hoặc User không tồn tại
           content:
             application/json:
               schema:
@@ -387,7 +391,7 @@ paths:
                   data:
                     $ref: '#/components/schemas/Todo'
         400:
-          description: Lỗi validation
+          description: Lỗi validation hoặc ID người dùng không hợp lệ
           content:
             application/json:
               schema:
@@ -483,8 +487,8 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/Todo'
-        403:
-          description: Không phải thành viên nhóm
+        400: # ✨ Đã sửa: Controller trả về 400 cho lỗi Service (bao gồm cả lỗi quyền truy cập/thành viên)
+          description: Lỗi validation, ID nhóm không hợp lệ, hoặc không phải thành viên nhóm
           content:
             application/json:
               schema:
@@ -515,8 +519,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Todo'
-        403:
-          description: Không có quyền truy cập nhóm
+        400: # ✨ Đã sửa: Controller trả về 400 cho lỗi Service (bao gồm cả lỗi quyền truy cập/thành viên)
+          description: ID nhóm không hợp lệ hoặc không có quyền truy cập nhóm
           content:
             application/json:
               schema:
@@ -546,14 +550,8 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/Todo'
-        404:
-          description: Todo không tồn tại
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        403:
-          description: Không có quyền truy cập
+        404: # Theo Controller, lỗi không tồn tại hoặc không có quyền đều trả về 404
+          description: Todo không tồn tại hoặc không có quyền truy cập
           content:
             application/json:
               schema:
@@ -598,8 +596,8 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/Todo'
-        403:
-          description: Không có quyền cập nhật (Chỉ Owner/Group Admin có quyền đổi Status)
+        404: # Theo Controller, lỗi không tồn tại hoặc không có quyền đều trả về 404
+          description: Todo không tồn tại hoặc không có quyền cập nhật
           content:
             application/json:
               schema:
@@ -624,14 +622,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        403:
-          description: Không có quyền xóa
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        404:
-          description: Todo không tồn tại
+        404: # Theo Controller, lỗi không tồn tại hoặc không có quyền đều trả về 404
+          description: Todo không tồn tại hoặc không có quyền xóa
           content:
             application/json:
               schema:
@@ -671,7 +663,7 @@ paths:
                   data:
                     $ref: '#/components/schemas/Group'
         400:
-          description: Lỗi validation
+          description: Lỗi validation hoặc ID người dùng không hợp lệ
           content:
             application/json:
               schema:
@@ -750,7 +742,7 @@ paths:
                   data:
                     $ref: '#/components/schemas/Group'
         404:
-          description: Nhóm không tồn tại hoặc không có quyền
+          description: ID nhóm không hợp lệ, Nhóm không tồn tại hoặc không có quyền truy cập
           content:
             application/json:
               schema:
@@ -792,8 +784,8 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/Group'
-        403:
-          description: Không có quyền cập nhật
+        400: # ✨ Đã sửa: Theo Controller, lỗi Service (validation, ID không hợp lệ, không có quyền) trả về 400
+          description: Lỗi validation, ID không hợp lệ, hoặc không có quyền cập nhật
           content:
             application/json:
               schema:
@@ -817,14 +809,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        403:
-          description: Không có quyền xóa
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        404:
-          description: Nhóm không tồn tại
+        400: # ✨ Đã sửa: Theo Controller, lỗi Service (ID không hợp lệ, không có quyền) trả về 400
+          description: ID không hợp lệ, Nhóm không tồn tại hoặc không có quyền xóa
           content:
             application/json:
               schema:
@@ -850,7 +836,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
         400:
-          description: Không thể rời nhóm
+          description: ID không hợp lệ, không phải thành viên, hoặc Chủ nhóm không thể rời nhóm
           content:
             application/json:
               schema:
@@ -892,14 +878,8 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/Invitation'
-        403:
-          description: Không có quyền mời
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         400:
-          description: User đã là thành viên hoặc đã có lời mời pending
+          description: ID nhóm không hợp lệ, không có quyền mời, user đã là thành viên hoặc đã có lời mời pending
           content:
             application/json:
               schema:
@@ -951,14 +931,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        404:
-          description: Lời mời không tồn tại hoặc hết hạn
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        403:
-          description: Lời mời không dành cho bạn (Email không khớp)
+        400: # ✨ Đã sửa: Theo Controller, lỗi Service (token hết hạn, không dành cho user, đã là thành viên) trả về 400
+          description: Lời mời không tồn tại/hết hạn, không dành cho bạn, hoặc đã là thành viên
           content:
             application/json:
               schema:
@@ -983,14 +957,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        404:
-          description: Lời mời không tồn tại
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        403:
-          description: Lời mời không dành cho bạn
+        400: # ✨ Đã sửa: Theo Controller, lỗi Service (token không hợp lệ, không dành cho user) trả về 400
+          description: Lời mời không tồn tại hoặc không dành cho bạn
           content:
             application/json:
               schema:
@@ -1015,19 +983,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        403:
-          description: Không có quyền hủy lời mời
+        400: # ✨ Đã sửa: Theo Controller, lỗi Service (không tồn tại, không có quyền) trả về 400
+          description: ID không hợp lệ, Lời mời không tồn tại hoặc không có quyền hủy lời mời
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        404:
-          description: Lời mời không tồn tại
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-                
+            
 tags:
   - name: Authentication
     description: Đăng ký, đăng nhập và quản lý user

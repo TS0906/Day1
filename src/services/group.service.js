@@ -1,5 +1,6 @@
 import { GET_DB } from "../config/db.js";
 import { ObjectId } from "mongodb";
+import { USER_ROLES } from "../constants/roles.js";
 
 class GroupService{
     constructor(){
@@ -25,13 +26,19 @@ class GroupService{
             if(!groupData.name || groupData.name.trim().length === 0){
                 return {success: false, errors: ['Nhap ten nhom']};
             }
+
+            if(!ObjectId.isValid(ownerId)){
+                return {success: false, errors: ['ID nguoi tao khong hop le']};
+            }
+
+            const ownerObjectId = new ObjectId(ownerId);
             
             const group = {
                 name: groupData.name.trim(),
                 description: groupData.description || '',
-                owner_id: new ObjectId(ownerId),
+                owner_id: ownerObjectId,
                 members: [{
-                    user_id: new ObjectId(ownerId),
+                    user_id: ownerObjectId,
                     role: 'admin',
                     joined_at: new Date()
                 }],
@@ -53,11 +60,15 @@ class GroupService{
     async getGroupByUser(userId, userRole = 'user'){
         try{
             if(!this.collection) this.init()
+
+            if(!ObjectId.isValid(userId)){
+                return {success: false, errors: ['ID nguoi dung khong hop le']};
+            }
             
             let query = {};
             const userObjectId = new ObjectId(userId);
 
-            if(userRole === 'admin'){
+            if(userRole === USER_ROLES.ADMIN){
                 query = {};
             }
             else{
@@ -84,10 +95,14 @@ class GroupService{
         try{
             if(!this.collection) this.init();
 
+            if(!ObjectId.isValid(userId)){
+                return {success: false, errors: ['ID khong hop le']};
+            }
+
             let query = {_id: new ObjectId(groupId)};
             const userObjectId = new ObjectId(userId);
 
-            if(userRole!== 'admin'){
+            if(userRole!== USER_ROLES.ADMIN){
                 query.$or =[
                     {'owner_id': userObjectId},
                     {'members.user_id': userObjectId}
@@ -110,6 +125,10 @@ class GroupService{
         try{
             if(!this.collection) this.init();
 
+            if(!ObjectId.isValid(userId)){
+                return {success: false, errors: ['ID nhom khong hop le']};
+            }
+
             if(updateData.name &&(!updateData.name.trim() || updateData.name.trim().length === 0))
             {
                 return{success: false, errors: ['Ten nhom khong duoc de trong']};
@@ -118,7 +137,8 @@ class GroupService{
             let query = {_id: new ObjectId(groupId)};
             const userObjectId = new ObjectId(userId);
 
-            if(userRole !== 'admin'){
+            if(userRole !== USER_ROLES.ADMIN){
+                if(!ObjectId.isValid(userId)) return {success: false, errors: ['ID nguoi dung khong hop le']};
                 query.owner_id = userObjectId;
             }
 
@@ -148,11 +168,17 @@ class GroupService{
     async deleteGroup(userRole, userId, groupId){
         try{
             if(!this.collection) this.init();
+
+            if(!ObjectId.isValid(groupId)){
+                return {success: false, errors: ['ID nhom khong hop le']};
+            }
+
             const userObjectId = new ObjectId(userId);
 
             let query = {_id: new ObjectId(groupId)};
 
-            if(userRole !== 'admin'){
+            if(userRole !== USER_ROLES.ADMIN){
+                if(!ObjectId.isValid(userId)) return {success: false, errors: ['ID nguoi dung khong hop le']};
                 query.owner_id = userObjectId;
             }
 
@@ -172,6 +198,10 @@ class GroupService{
         try{
             if(!this.collection) this.init();
 
+            if(!ObjectId.isValid(userId)){
+                return {success: false, errors: ['ID khong hop le']};
+            }
+
             const userObjectId = new ObjectId(userId);
             const groupObjectId = new ObjectId(groupId);
 
@@ -184,7 +214,7 @@ class GroupService{
                 return{success: false, errors: 'Ban khong o trong nhom nay'};
             }
 
-            if(group.owner_id.toString() === userId){
+            if(group.owner_id.equals(userObjectId)){
                 return {success: false, errors: 'Chu nhom khong the roi nhom'};
             }
 
@@ -198,6 +228,9 @@ class GroupService{
                 },
                 {returnDocument: 'after'}
             )
+            if(!result.value){
+                return {success: false, errors: ['Loi khi roi nhom']};
+            }
             return {success: true, message: 'Da roi nhom thanh cong'};
         }catch(error){
             console.error("Loi roi group", error);
@@ -208,7 +241,7 @@ class GroupService{
         try{
             if(!this.collection) this.init();
 
-            if(userRole !=='admin'){
+            if(userRole !== USER_ROLES.ADMIN){
                 return {success: false, errors: ['Khong co quyen truy cap']};
             }
 

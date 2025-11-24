@@ -1,3 +1,5 @@
+import { USER_ROLES } from '../constants/roles.js';
+
 export const requireAdmin = (req, res, next) => {
     try {
         if(!req.user || !req.user.role){
@@ -6,7 +8,7 @@ export const requireAdmin = (req, res, next) => {
                 error: "Chua dang nhap hoac thieu thong tin user"          
             })
         } 
-        if(req.user.role !== 'admin'){
+        if(req.user.role !== USER_ROLES.ADMIN){
             return res.status(403).json({
                 success: false,
                 error: "Khong co quyen admin"

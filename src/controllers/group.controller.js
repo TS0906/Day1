@@ -129,6 +129,7 @@ export const groupController = {
             })
         }
     },
+    //admin only
     getAllGroups: async(req, res) => {
         try{
             const result = await groupService.getAllGroups(req.userRole);
@@ -138,9 +139,9 @@ export const groupController = {
                     data: result.data
                 });
             } else{
-                res.status(400).json({
+                res.status(403).json({
                     success: false,
-                    errors: result.errors
+                    errors: result.errors || "Khong co quyen admin"
                 });
             }
         }catch(error){

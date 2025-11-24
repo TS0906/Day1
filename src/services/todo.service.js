@@ -1,6 +1,7 @@
 import { GET_DB } from '../config/db.js';
 import { ObjectId } from 'mongodb';
 import { validateTodo } from '../utils/validators.js';
+import { USER_ROLES } from '../constants/roles.js';
 
 class TodoService {
     constructor() {
@@ -15,15 +16,16 @@ class TodoService {
             this.collection = this.db.collection('todos');
             this.groupCollection = this.db.collection('groups');
         } catch(error){
-            console.log('Init todos failed!', error.message);
+            console.log('Tao todo loi', error.message);
         }
     }
 
     async _checkGroupMembership(groupId, userId){
+        if(!ObjectId.isValid(groupId) || !ObjectId.isValid(userId)) return null;
         const group = await this.groupCollection.findOne({
             _id: new ObjectId(groupId),
             $or: [
-                {'owner_id': new ObjectId(userId)},
+                {'ownerId': new ObjectId(userId)},
                 {'members.user_id': new ObjectId(userId)}
             ]
         });
@@ -34,6 +36,10 @@ class TodoService {
     async createTodo(todoData, userId) {
         try {
             if(!this.collection) this.init();
+
+            if(!ObjectId.isValid(userId)){
+                return {success: false, errors: ['ID khong hop le']};
+            }
 
             const validation = validateTodo(todoData);
             if (!validation.isValid) {
@@ -68,6 +74,10 @@ class TodoService {
     async createGroupTodo(todoData, groupId, userId){
         try{
             if(!this.collection) this.init();
+
+            if(!ObjectId.isValid(groupId) || !ObjectId.isValid(userId)){
+                return {success: false, errors: ['ID khong hop le']};
+            }
 
             const validation = validateTodo(todoData);
             if(!validation.isValid){
@@ -104,41 +114,50 @@ class TodoService {
         try {
             if (!this.collection) this.init();
 
-        const skip = (page - 1) * limit;
-
-        const todos = await this.collection
-            .find({ user_id: new ObjectId(userId), group_id: null })
-            .sort({ created_at: -1 })
-            .skip(skip)
-            .limit(limit)
-            .toArray();
-
-        const total = await this.collection.countDocuments({
-            user_id: new ObjectId(userId),
-            group_id: null
-        });
-
-        return {
-            success: true,
-            data: {
-                todos,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit)
-                }
+            if(!ObjectId.isValid(userId)){
+                return {success: false, errors: ['ID khong hop le']};
             }
-        };
+
+            const userIdObject = new ObjectId(userId);
+            const skip = (page - 1) * limit;
+
+            const todos = await this.collection
+                .find({ user_id: userIdObject, group_id: null })
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(limit)
+                .toArray();
+
+            const total = await this.collection.countDocuments({
+                user_id: new ObjectId(userId),
+                group_id: null
+            });
+
+            return {
+                success: true,
+                data: {
+                    todos,
+                    pagination: {
+                        page,
+                        limit,
+                        total,
+                        totalPages: Math.ceil(total / limit)
+                    }
+                }
+            };
 
         } catch (error) {
             return { success: false, errors: [error.message] };
         }
     }
 
-    async getGroupTodos(groupId, userId, userRole){
+    async getGroupTodos(groupId, userId){
         try{
             if(!this.collection) this.init();
+
+            if(!ObjectId.isValid(userId) || !ObjectId.isValid(groupId)){
+                return {success: false, errors: ['ID khong hop le']};
+            }
 
             const group = await this._checkGroupMembership(groupId, userId);
             if(!group){
@@ -160,6 +179,11 @@ class TodoService {
         try{
             if(!this.collection) this.init();
 
+            if(!ObjectId.isValid(userId) || !ObjectId.isValid(todoId)){
+                return {success: false, errors: ['ID khong hop le']};
+            }
+
+            const userIdObject = new ObjectId(userId);
             const todoObjectId = new ObjectId(todoId);
 
             const todo = await this.collection.findOne({
@@ -180,26 +204,26 @@ class TodoService {
                 }
 
                 const userMembership = group.members.find(
-                    member => member.user_id.toString() === userId
+                    member => member.user_id.equals(userIdObject)
                 );
 
                 if(updateData.completed !== undefined){ //updateStatus: chi owner hoac admin
-                    if(group.owner_id.toString() === userId){
+                    if(group.owner_id.equals(userIdObject)){
                         hasPermission = true;
-                    }else if(userMembership && userMembership.role === 'admin'){
+                    }else if(userMembership && userMembership.role === USER_ROLES.ADMIN){
                         hasPermission = true;
                     } else{
                         hasPermission = false;
                     }                 
                 } else{
-                    if(todo.user_id.toString()===userId){
+                    if(todo.user_id.equals(userIdObject)){
                         hasPermission = true;
-                    } else if(group.owner_id.toString() === userId || (userMembership && userMembership.role === 'admin')){
+                    } else if(group.owner_id.equals(userIdObject) || (userMembership && userMembership.role === USER_ROLES.ADMIN)){
                         hasPermission = true;
                     }
                 }
             }else{
-                hasPermission = todo.user_id.toString() === userId;
+                hasPermission = todo.user_id.equals(userIdObject);
             }
 
             if(!hasPermission){
@@ -207,6 +231,7 @@ class TodoService {
             }
 
             delete updateData._id; 
+            delete updateData.user._id;
 
             const result = await this.collection.findOneAndUpdate(
                 {_id: todoObjectId},
@@ -229,9 +254,14 @@ class TodoService {
         try {
             if(!this.collection) this.init()
 
-            let query = {_id: todoObjectId};
+            if(!ObjectId.isValid(userId) || !ObjectId.isValid(todoId)){
+                return {success: false, errors: ['ID khong hop le']};
+            }
 
-            const todo = await this.collection.findOne({query});
+            const todoObjectId = new ObjectId(todoId);
+            const userIdObject = new ObjectId(userId);
+
+            const todo = await this.collection.findOne({_id: todoObjectId});
 
             if (!todo) {
                 return { success: false, errors: ["Todo khong tim thay"] };
@@ -239,24 +269,21 @@ class TodoService {
 
             let hasPermission = false;
 
-            if(todo.group_id){
-                const group = await this._checkGroupMembership(todo.group_id.toString(), userId);
-                hasPermission = !!group || userRole === 'admin';
+            if(userRole === USER_ROLES.ADMIN){
+                hasPermission = true;
             }
 
-            if(userRole === 'admin'){
-                hasPermission = true; //admin khong duoc xem todo ca nhan, chi duoc xem todo chung
-            }
-
-            if(todo.group_id){
+            else if(todo.group_id){
                 const group = await this._checkGroupMembership(todo.group_id.toString(), userId);
                 hasPermission = !!group;
-            } else{ //todo ca nhan chi co chu so huu xem
-                hasPermission = todo.user_id.toString() === userId;
+            }
+
+            else{
+                hasPermission = todo.user_id.equals(userIdObject);
             }
 
             if(!hasPermission){
-                return{success: false, errors: ["Khong co quyen truy cap todo nay"]};
+                return {success: false, errors: ["Khong co quyen truy cap todo nay"]};
             }
 
             return {
@@ -273,8 +300,15 @@ class TodoService {
         try {
             if(!this.collection) this.init();
 
+            if(!ObjectId.isValid(userId) || !ObjectId.isValid(todoId)){
+                return {success: false, errors: ['ID khong hop le']};
+            }
+
+            const todoObjectId = new ObjectId(todoId);
+            const userIdObject = new ObjectId(userId);
+
             const todo = await this.collection.findOne({
-                _id: new ObjectId(todoId)
+                _id: todoObjectId
             });
 
             if (!todo) {
@@ -283,7 +317,7 @@ class TodoService {
 
             let hasPermission = false;
 
-            if(userRole ==='admin'){
+            if(userRole ===USER_ROLES.ADMIN){
                 hasPermission = true;
             }
 
@@ -297,21 +331,21 @@ class TodoService {
                 }
 
                 const userMembership = group.members.find(
-                    member => member.user_id.toString() === userId
+                    member => member.user_id.equals(userIdObject)
                 );
 
-                if(group.owner_id.toString() === userId){
+                if(group.owner_id.equals(userIdObject)){
                     hasPermission = true;
-                } else if(userMembership && userMembership.role === 'admin'){
+                } else if(userMembership && userMembership.role === USER_ROLES.ADMIN){
                     hasPermission = true;
-                } else if (todo.user_id.toString() === userId){
+                } else if (todo.user_id.equals(userIdObject)){
                     hasPermission = true;
                 }
 
             }
             else {
                 //todo ca nhan: chi chu todo duoc xoa
-                hasPermission = todo.user_id.toString() === userId;
+                hasPermission = todo.user_id.equals(userIdObject);
             }
 
             if(!hasPermission){
@@ -319,7 +353,7 @@ class TodoService {
             }
 
             const result = await this.collection.findOneAndDelete({
-                _id: new ObjectId(todoId)
+                _id: todoObjectId
             });
 
             if(!result.value){

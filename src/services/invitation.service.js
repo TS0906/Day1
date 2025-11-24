@@ -2,6 +2,7 @@ import { GET_DB } from "../config/db.js";
 import { ObjectId } from "mongodb";
 import crypto from 'crypto';
 import { validateInvitation } from "../utils/validators.js";
+import { USER_ROLES } from "../constants/roles.js";
 
 class InvitationService{
     constructor(){
@@ -26,6 +27,13 @@ class InvitationService{
         try{
             if(!this.invitationCollection) this.init();
 
+            if(!ObjectId.isValid(inviterId) || !ObjectId.isValid(groupId)){
+                return {success: false, errors: ['ID khong hop le']}
+            }
+
+            const groupObjectId = new ObjectId(groupId);
+            const inviterObjectId = new ObjectId(inviterId);
+
             const validation = validateInvitation({email: inviteeEmail});
             if(!validation.isValid){
                 return {success: false, errors: validation.errors};
@@ -34,8 +42,8 @@ class InvitationService{
             const group = await this.groupCollection.findOne({
                 _id: new ObjectId(groupId),
                 $or: [
-                    {owner_id: new ObjectId(inviterId)},
-                    {'members.user_id': new ObjectId(inviterId), 'members.role': 'admin'}
+                    {owner_id: inviterObjectId},
+                    {'members.user_id': inviterObjectId, 'members.role': 'admin'}
                 ]
             });
 
@@ -49,7 +57,7 @@ class InvitationService{
 
             if(existingUser){
                 const isMember = group.members.some(m =>
-                    m.user_id.toString() === existingUser._id.toString()
+                    m.user_id.equals(existingUser._id)
                 );
                 if(isMember){
                     return {success: false, errors: ['Nguoi dung da o trong nhom']};
@@ -173,6 +181,12 @@ class InvitationService{
         try{
             if(!this.invitationCollection) this.init();
 
+            if(!ObjectId.isValid(userId)){
+                return {success: false, errors: ['ID khong hop le']};
+            }
+
+            const userObjectId = new ObjectId(userId);
+
             const invitation = await this.invitationCollection.findOne({
                 token: token,
                 status: 'pending',
@@ -184,7 +198,7 @@ class InvitationService{
             }
 
             const user = await this.userCollection.findOne({
-                _id: new ObjectId(userId)
+                _id: userObjectId
             });
 
             if(!user || user.email !== invitation.invitee_email){
@@ -193,7 +207,7 @@ class InvitationService{
 
             const existingGroup = await this.groupCollection.findOne({
                 _id: invitation.group_id,
-                'members.user_id': new ObjectId(userId)
+                'members.user_id': userObjectId
             });
 
             if (existingGroup) {
@@ -209,7 +223,7 @@ class InvitationService{
                 {
                     $addToSet: {
                         members: {
-                            user_id: new ObjectId(userId),
+                            user_id: userObjectId,
                             role: 'member',
                             joined_at: new Date()
                         }
@@ -237,6 +251,12 @@ class InvitationService{
         try{
             if(!this.invitationCollection) this.init(); 
 
+            if(!ObjectId.isValid(userId)){
+                return {success: false, errors: ['ID nguoi dung khong hop le']};
+            }
+
+            const userObjectId = new ObjectId(userId);
+
             const invitation = await this.invitationCollection.findOne({
                 token: token,
                 status: 'pending'
@@ -247,7 +267,7 @@ class InvitationService{
             }
 
             const user = await this.userCollection.findOne({
-                _id: new ObjectId(userId)
+                _id: userObjectId
             });
 
             if(!user || user.email !== invitation.invitee_email){
@@ -270,8 +290,15 @@ class InvitationService{
         try{
             if(!this.invitationCollection) this.init();
 
+            if(!ObjectId.isValid(userId)){
+                return {success: false, errors: ['ID khong hop le']};
+            }
+
+            const invitationObjectId = new ObjectId(invitationId);
+            const userObjectId = new ObjectId(userId);
+
             const invitation = await this.invitationCollection.findOne({
-                _id: new ObjectId(invitationId)
+                _id: new invitationObjectId
             });
 
             if(!invitation){
@@ -280,17 +307,17 @@ class InvitationService{
 
             let hasPermission = false;
 
-            if(userRole === 'admin'){
+            if(userRole === USER_ROLES.ADMIN){
                 hasPermission = true;
             } else{
                 const group = await this.groupCollection.findOne({
                     _id: invitation.group_id, 
                     $or: [
-                        {owner_id: new ObjectId(userId)},
-                        {'members.user_id': new ObjectId(userId), 'members.role': 'admin'}
+                        {owner_id: userObjectId},
+                        {'members.user_id': userObjectId, 'members.role': 'admin'}
                     ]
                 });
-                hasPermission = !!group || invitation.inviter_id.toString() === userId;
+                hasPermission = !!group || invitation.inviter_id.equals(userObjectId);
             }
 
             if(!hasPermission){

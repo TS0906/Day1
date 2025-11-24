@@ -2,6 +2,7 @@
     import { ObjectId, ReturnDocument } from "mongodb";
     import { validateLogin,  validateRegister, hashPassword, comparePassword} from "../utils/validators.js";
     import { genToken } from "../utils/jwt.js";
+    import { USER_ROLES } from "../constants/roles.js";
 
     class AuthService{
         constructor(){
@@ -37,7 +38,7 @@
                     name: userData.name.trim(),
                     email: userData.email.toLowerCase(),
                     password: hashedPassword,
-                    role: 'user',
+                    role: USER_ROLES.USER,
                     created_at: new Date(), 
                     updated_at: new Date()  
                 }
@@ -107,13 +108,16 @@
         async getUserById(userId) {
             try {
                 if(!this.collection) this.init();
+                if(!ObjectId.isValid(userId)){
+                    return null;
+                }
                 const user = await this.collection.findOne(
                     { _id: new ObjectId(userId) },
                     { projection: { password: 0 } }
                 );
                 return user;
             } catch (error) {
-                console.error("Get user by id error:", error);
+                console.error("Lay user bang id loi", error);
                 return null;
             }
         }
@@ -122,7 +126,7 @@
                 if(!this.collection) this.init();
 
                 const users = await this.collection
-                    .find({}, {protjection: {password: 0}})
+                    .find({}, {projection: {password: 0}})
                     .sort({created_at: -1})
                     .toArray();
 
@@ -134,6 +138,10 @@
         async updateUserRole(userId, newRole){
             try{
                 if(!this.collection) this.init();
+
+                if(!ObjectId.isValid(userId)){
+                    return {success: false, errors: ['ID nguoi dung khong hop le']};
+                }
 
                 const result = await this.collection.findOneAndUpdate(
                     {_id: new ObjectId(userId)},
@@ -153,7 +161,7 @@
                 return {success: true, data: result.value};
             } catch(error){
                 console.error("Loi update UserRole", error);
-                return{success: false, error: 'Error'};
+                return{success: false, errors: ['Loi cap nhat vai tro']};
             }
         }
     }
