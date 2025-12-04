@@ -7,7 +7,7 @@ export const authController = {
             if (result.success) {
                 res.status(201).json({
                     success: true,
-                    ...result.data
+                    message: "Register successful"
                 });
             } else {
                 res.status(400).json({
@@ -19,7 +19,7 @@ export const authController = {
         } catch(error){
             res.status(500).json({
                 success: false,
-                error: "Error"
+                error: "Internal Server Error"
             });
         }
     },
@@ -42,7 +42,7 @@ export const authController = {
         } catch(error){
             res.status(500).json({
                 success: false, 
-                error: "Error"
+                error: "Internal Server Error"
             });
         }
     },
@@ -52,7 +52,7 @@ export const authController = {
                 success: true,
                 data: {
                     user: {
-                        id: req.userId,
+                        id: req.user._id,
                         name: req.user.name,
                         email: req.user.email,
                         role: req.user.role
@@ -62,7 +62,7 @@ export const authController = {
         } catch (error) {
             res.status(500).json({
                 success: false,
-                error: "Error"
+                error: "Internal Server Error"
             });
         }
     },
@@ -83,20 +83,23 @@ export const authController = {
         } catch (error) {
             res.status(500).json({
                 success: false,
-                error: "Error"
+                error: "Internal Server Error"
             });
         }
     },
     updateUserRole: async (req, res) => {
         try {
-            const result = await authService.updateUserRole(req.params.id, req.body.role);
+            const userIdParam = req.params.id || req.params.userId;
+            const result = await authService.updateUserRole(userIdParam, req.body.role);
             if (result.success) {
                 res.json({
                     success: true,
                     data: result.data
                 });
             } else {
-                res.status(400).json({
+                const isNotFoundError = result.errors && (result.errors.includes('User not found.') || result.errors.general);
+                const statusCode = isNotFoundError ? 404 : 400;
+                res.status(statusCode).json({
                     success: false,
                     errors: result.errors
                 });
@@ -104,7 +107,7 @@ export const authController = {
         } catch (error) {
             res.status(500).json({
                 success: false,
-                error: "Error"
+                error: "Internal Server Error"
             });
         }
     }

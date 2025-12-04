@@ -4,9 +4,8 @@ export const invitationController = {
     createInvitation: async(req, res) => {
         try{
             const result = await invitationService.createInvitation(
-                req.params.groupId,
-                req.userId,
-                req.body.email
+                { groupId: req.params.groupId, inviteeEmail: req.body.email },
+                req.user._id
             );
             if(result.success){
                 res.status(201).json({
@@ -14,7 +13,8 @@ export const invitationController = {
                     data: result.data
                 });
             } else{
-                res.status(400).json({
+                const statusCode = result.errors && (result.errors.includes('Permission denied') || result.errors.includes('Group not found')) ? 403 : 400;
+                res.status(statusCode).json({
                     success: false,
                     errors: result.errors
                 });
@@ -22,13 +22,13 @@ export const invitationController = {
         } catch (error){
             res.status(500).json({
                 success: false,
-                error: "Loi"
+                error: "Internal Server Error"
             })
         }
     },
     getMyInvitations: async (req, res) => {
         try{
-            const result = await invitationService.getInvitationsByUser(req.user.email);
+            const result = await invitationService.getInvitationsByUser(req.user._id);
             if(result.success){
                 res.json({
                     success: true,
@@ -43,13 +43,13 @@ export const invitationController = {
         } catch (error){
             res.status(500).json({
                 success: false,
-                error: "Loi"
+                error: "Internal Server Error"
             });
         }
     },
     acceptInvitation: async(req, res) => {
         try{
-            const result = await invitationService.acceptInvitation(req.params.token, req.userId);
+            const result = await invitationService.acceptInvitation(req.params.token, req.user._id);
             if(result.success){
                 res.json({
                     success: true,
@@ -64,13 +64,13 @@ export const invitationController = {
         } catch(error){
             res.status(500).json({
                 success: false,
-                error: "Loi"
+                error: "Internal Server Error"
             });
         }
     },
     rejectInvitation: async(req, res) => {
         try{
-            const result = await invitationService.rejectInvitation(req.params.token, req.userId);
+            const result = await invitationService.rejectInvitation(req.params.token, req.user._id);
             if(result.success){
                 res.json({
                     success: true,
@@ -85,7 +85,7 @@ export const invitationController = {
         } catch(error){
             res.status(500).json({
                 success: false,
-                error: "Loi"
+                error: "Internal Server Error"
             })
         }
     },
@@ -93,8 +93,8 @@ export const invitationController = {
         try{
             const result = await invitationService.cancelInvitation(
                 req.params.invitationId,
-                req.userId,
-                req.userRole
+                req.user._id,
+                req.user.role
             );
             if(result.success){
                 res.json({
@@ -102,13 +102,19 @@ export const invitationController = {
                     message: result.message
                 });
             } else{
-                res.status(400).json({
+                const isPermissionError = result.errors && result.errors.includes('Permission denied');
+                const isNotFoundError = result.errors && result.errors.includes('Invitation not found');
+                
+                let statusCode = 400;
+                if (isPermissionError) statusCode = 403;
+                else if (isNotFoundError) statusCode = 404;
+
+                res.status(statusCode).json({
                     success: false,
                     errors: result.errors
                 })
             }
         } catch(error){
-            console.error("Cancel invitation error:", error);
             res.status(500).json({
                 success: false,
                 error: "Loi"

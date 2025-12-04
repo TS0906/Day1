@@ -1,375 +1,192 @@
-import { GET_DB } from '../config/db.js';
+import TodoModel from '../models/todo.js';
+import GroupModel from '../models/group.js';
 import { ObjectId } from 'mongodb';
 import { validateTodo } from '../utils/validators.js';
 import { USER_ROLES } from '../constants/roles.js';
 
-class TodoService {
-    constructor() {
-        this.db = null;
-        this.collection = null;
-        this.groupCollection = null;
+const isGroupMember = async (groupId, userId) => {
+    if(!ObjectId.isValid(groupId)||!ObjectId.isValid(userId)) {
+        return null;
     }
-
-    init(){
-        try{
-            this.db = GET_DB();
-            this.collection = this.db.collection('todos');
-            this.groupCollection = this.db.collection('groups');
-        } catch(error){
-            console.log('Tao todo loi', error.message);
+    const group = await GroupModel.findOne({
+        _id: groupId,
+        members: userId
+    }).lean();
+    return group;
+};
+const createTodo = async (todoData, userId) => {
+    try{
+        if(!ObjectId.isValid(userId)) {
+            return { success: false, errors: ['Invalid user ID'] };
         }
-    }
-
-    async _checkGroupMembership(groupId, userId){
-        if(!ObjectId.isValid(groupId) || !ObjectId.isValid(userId)) return null;
-        const group = await this.groupCollection.findOne({
-            _id: new ObjectId(groupId),
-            $or: [
-                {'ownerId': new ObjectId(userId)},
-                {'members.user_id': new ObjectId(userId)}
-            ]
+        const validation = validateTodo(todoData);
+        if(!validation.isValid) {
+            return { success: false, errors: validation.errors };
+        }
+        const todo = await TodoModel.create({
+            title: todoData.title.trim(),
+            description: todoData.description || '',
+            isCompleted: false,
+            creatorId: userId, 
+            groupId: null,
+            isDeleted: false,
         });
-        return group;
+        return {
+            success: true,
+            data: todo.toJSON()
+         };
+    } catch(error) {
+        console.error('Error creating todo:', error);
+        throw error;
     }
+};
+const createGroupTodo = async (todoData, groupId, userId) => {
+    try{
+        if(!ObjectId.isValid(userId) || !ObjectId.isValid(groupId)) {
+            return { success: false, errors: ['Invalid ID provided'] };
+        }
+        const validation = validateTodo(todoData);
+        if(!validation.isValid) {
+            return { success: false, errors: validation.errors };
+        }
+        const group = await isGroupMember(groupId, userId);
+        if(!group) {
+            return { success: false, errors: ['Group not found or you are not a member'] };
+        }
+        const todo = await TodoModel.create({
+            title: todoData.title.trim(),
+            description: todoData.description || '',
+            isCompleted: false,
+            creatorId: userId,
+            groupId: groupId,
+            isDeleted: false,
+        });
+        return {
+            success: true,
+            data: todo.toJSON()
+        };
+    } catch (error) {
+        console.error('Error creating group todo:', error);
+        throw error;
+    }
+};
+const getTodosByUserId = async (userId, page = 1, limit = 10) => {
+    try{
+        if(!ObjectId.isValid(userId)) {
+            return { success: false, errors: ['Invalid user ID'] };
+        }
+        const userObjectId = new ObjectId(userId);
+        const skip = (page - 1) * limit;
 
-    //tao todo cho tung user
-    async createTodo(todoData, userId) {
-        try {
-            if(!this.collection) this.init();
-
-            if(!ObjectId.isValid(userId)){
-                return {success: false, errors: ['ID khong hop le']};
-            }
-
-            const validation = validateTodo(todoData);
-            if (!validation.isValid) {
-                return { success: false, errors: validation.errors };
-            }
-
-            const todo = {
-                title: todoData.title.trim(),
-                description: todoData.description || '',
-                completed: false,
-                user_id: new ObjectId(userId), 
-                created_at: new Date(),
-                updated_at: new Date(),
-                group_id: null
-            };
-
-            const result = await this.collection.insertOne(todo);
-            
-            return {
-                success: true,
-                data: {
-                    ...todo,
-                    _id: result.insertedId
+        const query = {creatorId: userObjectId, groupId: null, isDeleted: false};
+        const todos = await TodoModel.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+        const total = await TodoModel.countDocuments(query);
+        return{
+            success: true,
+            data: {
+                todos,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit)
                 }
-            };
-
-        } catch (error) {
-            return { success: false, errors: [error.message] };
-        }
+            }
+        };
+    } catch (error) {
+        console.error('Error retrieving todos:', error);
+        throw error;
     }
-//tao todo cho group by user
-    async createGroupTodo(todoData, groupId, userId){
-        try{
-            if(!this.collection) this.init();
-
-            if(!ObjectId.isValid(groupId) || !ObjectId.isValid(userId)){
-                return {success: false, errors: ['ID khong hop le']};
-            }
-
-            const validation = validateTodo(todoData);
-            if(!validation.isValid){
-                return {success: false, errors: validation.errors};
-            }
-
-            const group = await this._checkGroupMembership(groupId, userId);
-            if(!group){
-                return {success: false, errors: ['Ban khong phai la thanh vien cua group']}
-            }
-
-            const todo = {
-                title: todoData.title.trim(),
-                description: todoData.description || '',
-                completed: false,
-                user_id: new ObjectId(userId),
-                group_id: new ObjectId(groupId),
-                created_at: new Date(),
-                updated_at: new Date()
-            }
-            const result = await this.collection.insertOne(todo);
-
-            return{
-                success: true,
-                data: {...todo, _id: result.insertedId}
-            };
-        }catch(error){
-            return{success: false, errors: [error.message]};
+};
+const getGroupTodos = async (groupId, userId) => {
+    try{
+        if(!ObjectId.isValid(userId) || !ObjectId.isValid(groupId)) {
+            return { success: false, errors: ['Invalid ID provided'] };
         }
-    }
-
-
-    async getTodosByUserId(userId, page = 1, limit = 10) {
-        try {
-            if (!this.collection) this.init();
-
-            if(!ObjectId.isValid(userId)){
-                return {success: false, errors: ['ID khong hop le']};
-            }
-
-            const userIdObject = new ObjectId(userId);
-            const skip = (page - 1) * limit;
-
-            const todos = await this.collection
-                .find({ user_id: userIdObject, group_id: null })
-                .sort({ created_at: -1 })
-                .skip(skip)
-                .limit(limit)
-                .toArray();
-
-            const total = await this.collection.countDocuments({
-                user_id: new ObjectId(userId),
-                group_id: null
-            });
-
-            return {
-                success: true,
-                data: {
-                    todos,
-                    pagination: {
-                        page,
-                        limit,
-                        total,
-                        totalPages: Math.ceil(total / limit)
-                    }
-                }
-            };
-
-        } catch (error) {
-            return { success: false, errors: [error.message] };
+        const group = await isGroupMember(groupId, userId);
+        if(!group) {
+            return { success: false, errors: ['Group not found or access denied'] };
         }
+        const todos = await TodoModel.find({groupId: groupId, isDeleted: false})
+            .sort({createdAt: -1})
+            .lean();
+        return {success: true, data: todos};
+    } catch (error) {
+        console.error('Error retrieving group todos:', error);
+        throw error;
     }
-
-    async getGroupTodos(groupId, userId){
-        try{
-            if(!this.collection) this.init();
-
-            if(!ObjectId.isValid(userId) || !ObjectId.isValid(groupId)){
-                return {success: false, errors: ['ID khong hop le']};
-            }
-
-            const group = await this._checkGroupMembership(groupId, userId);
-            if(!group){
-                return {success: false, errors: ["Ban khong co quyen truy cap todo nhom nay"]};
-            }
-
-            const todos = await this.collection
-                .find({group_id: new ObjectId(groupId)})
-                .sort({created_at: -1})
-                .toArray();
-            
-            return {success: true, data: todos};
-        }catch(error){
-            return {success: false, errors: [error.message]};
+};
+const updateTodo = async (todoId, updateData, userId, userRole) => {
+    try{
+        if(!ObjectId.isValid(todoId) || !ObjectId.isValid(userId)) {
+            return { success: false, errors: ['Invalid ID provided'] };
         }
-    }
+        const updateFields = {};
+        if(updateData.title) updateFields.title = updateData.title.trim();
+        if(updateData.description !== undefined) updateFields.description = updateData.description;
+        if(updateData.isCompleted !== undefined) updateFields.isCompleted = updateData.isCompleted; 
 
-    async updateTodo(todoId, userId, userRole, updateData){
-        try{
-            if(!this.collection) this.init();
-
-            if(!ObjectId.isValid(userId) || !ObjectId.isValid(todoId)){
-                return {success: false, errors: ['ID khong hop le']};
-            }
-
-            const userIdObject = new ObjectId(userId);
-            const todoObjectId = new ObjectId(todoId);
-
-            const todo = await this.collection.findOne({
-                _id: todoObjectId
-            });
-
-            if(!todo){
-                return {success: false, errors: ['Todo khong ton tai']};
-            }
-
-            let hasPermission = false;
-
-            if(todo.group_id){
-                const group = await this.groupCollection.findOne({_id: todo.group_id});
-
-                if(!group){
-                    return {success: false, errors: 'Nhom lien ket voi Todo khong ton tai'};
-                }
-
-                const userMembership = group.members.find(
-                    member => member.user_id.equals(userIdObject)
-                );
-
-                if(updateData.completed !== undefined){ //updateStatus: chi owner hoac admin
-                    if(group.owner_id.equals(userIdObject)){
-                        hasPermission = true;
-                    }else if(userMembership && userMembership.role === USER_ROLES.ADMIN){
-                        hasPermission = true;
-                    } else{
-                        hasPermission = false;
-                    }                 
-                } else{
-                    if(todo.user_id.equals(userIdObject)){
-                        hasPermission = true;
-                    } else if(group.owner_id.equals(userIdObject) || (userMembership && userMembership.role === USER_ROLES.ADMIN)){
-                        hasPermission = true;
-                    }
-                }
-            }else{
-                hasPermission = todo.user_id.equals(userIdObject);
-            }
-
-            if(!hasPermission){
-                return{success: false, errors: 'Ban khong co quyen chinh sua Todo nay'};
-            }
-
-            delete updateData._id; 
-            delete updateData.user._id;
-
-            const result = await this.collection.findOneAndUpdate(
-                {_id: todoObjectId},
-                {
-                    $set: {
-                        ...updateData,
-                        updated_at: new Date()
-                    }
-                },
-                {returnDocument: 'after'}
-            );
-
-            return{success: true, data: result.value};
-        }catch(error){
-            return{success: false, errors: [error.message]};
+        if(Object.keys(updateFields).length === 0) {
+            return { success: false, errors: ['No valid fields to update'] };
         }
-    }
-
-    async getTodoById(todoId, userId, userRole) {
-        try {
-            if(!this.collection) this.init()
-
-            if(!ObjectId.isValid(userId) || !ObjectId.isValid(todoId)){
-                return {success: false, errors: ['ID khong hop le']};
-            }
-
-            const todoObjectId = new ObjectId(todoId);
-            const userIdObject = new ObjectId(userId);
-
-            const todo = await this.collection.findOne({_id: todoObjectId});
-
-            if (!todo) {
-                return { success: false, errors: ["Todo khong tim thay"] };
-            }
-
-            let hasPermission = false;
-
-            if(userRole === USER_ROLES.ADMIN){
-                hasPermission = true;
-            }
-
-            else if(todo.group_id){
-                const group = await this._checkGroupMembership(todo.group_id.toString(), userId);
-                hasPermission = !!group;
-            }
-
-            else{
-                hasPermission = todo.user_id.equals(userIdObject);
-            }
-
-            if(!hasPermission){
-                return {success: false, errors: ["Khong co quyen truy cap todo nay"]};
-            }
-
-            return {
-                success: true,
-                data: todo
-            };
-
-        } catch (error) {
-            return { success: false, errors: [error.message] };
+        const result = await TodoModel.findOneAndUpdate(
+            {_id: todoId}, 
+            { $set: updateFields },
+            { new: true, lean: true } 
+        );
+        if(!result) { 
+            return { success: false, errors: ['Update failed or Todo not found'] };
         }
+        return { success: true, data: result };
+    } catch (error) {   
+        console.error('Error updating todo:', error);
+        throw error;
     }
-
-    async deleteTodo(todoId, userId, userRole) {
-        try {
-            if(!this.collection) this.init();
-
-            if(!ObjectId.isValid(userId) || !ObjectId.isValid(todoId)){
-                return {success: false, errors: ['ID khong hop le']};
-            }
-
-            const todoObjectId = new ObjectId(todoId);
-            const userIdObject = new ObjectId(userId);
-
-            const todo = await this.collection.findOne({
-                _id: todoObjectId
-            });
-
-            if (!todo) {
-                return { success: false, errors: ["Todo khong ton tai"] };
-            }
-
-            let hasPermission = false;
-
-            if(userRole ===USER_ROLES.ADMIN){
-                hasPermission = true;
-            }
-
-            else if(todo.group_id){
-                //chi admin hoac nguoi tao nhom xoa
-                const group = await this.groupCollection.findOne({
-                    _id: todo.group_id
-                });
-                if(!group){
-                    return {success: false, errors: 'Nhom lien ket voi Todo khong ton tai.'};
-                }
-
-                const userMembership = group.members.find(
-                    member => member.user_id.equals(userIdObject)
-                );
-
-                if(group.owner_id.equals(userIdObject)){
-                    hasPermission = true;
-                } else if(userMembership && userMembership.role === USER_ROLES.ADMIN){
-                    hasPermission = true;
-                } else if (todo.user_id.equals(userIdObject)){
-                    hasPermission = true;
-                }
-
-            }
-            else {
-                //todo ca nhan: chi chu todo duoc xoa
-                hasPermission = todo.user_id.equals(userIdObject);
-            }
-
-            if(!hasPermission){
-                return{success: false, errors: 'Ban khong co quyen xoa todo nay'};
-            }
-
-            const result = await this.collection.findOneAndDelete({
-                _id: todoObjectId
-            });
-
-            if(!result.value){
-                return {success: false, errors: ["Todo khong ton tai hoac da bi xoa truoc do."]};
-            }
-
-            return {
-                success: true,
-                message: "Todo da xoa thanh cong."
-            };
-
-        } catch (error) {
-            console.error("Khong xoa duoc Todo:", error);
-            return { success: false, errors: [error.message] };
+};
+const getTodoById = async (todoId, userId, userRole) => {
+    try{
+        if(!ObjectId.isValid(todoId) || !ObjectId.isValid(userId)) {
+            return { success: false, errors: ['Invalid ID provided'] };
         }
+        const todo = await TodoModel.findOne({_id: todoId, isDeleted: false}).lean();
+        if(!todo) {
+            return { success: false, errors: ['Todo not found'] };
+        }
+        return { success: true, data: todo };
+    } catch (error) {
+        console.error('Error retrieving todo by ID:', error);
+        throw error;
     }
-}
-
-export const todoService = new TodoService();
+};
+const deleteTodo = async (todoId, userId, userRole) => {
+    try{
+        if(!ObjectId.isValid(todoId) || !ObjectId.isValid(userId)) {
+            return { success: false, errors: ['Invalid ID provided'] };
+        }
+        const result = await TodoModel.findOneAndDelete(
+            {_id: todoId, isDeleted: false},
+            {$set: {isDeleted: true}},
+            {new: true, lean: true}
+        );
+        if(!result) {
+            return { success: false, errors: ['Todo not found or deletion failed'] };
+        }
+        return { success: true, message: 'Todo deleted successfully' };
+    } catch (error) {
+        console.error('Error deleting todo:', error);
+        throw error;
+    }
+};
+export const todoService = {
+    createTodo,
+    createGroupTodo,
+    getTodosByUserId,
+    getGroupTodos,
+    updateTodo,
+    getTodoById,
+    deleteTodo
+};

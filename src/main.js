@@ -1,12 +1,14 @@
-import { CONNECT_DB } from './config/db.js';
-import { startServer } from './server.js';
+import { connectDB } from './config/db.js';
+import { START_SERVER } from '../server.js';
 
 const startApp = async () => {
     try {
-        await CONNECT_DB();
-        startServer();
+        console.log('Attempting to connect to the database...');
+        await connectDB();
+        console.log('Starting the server...');
+        START_SERVER();
     } catch (error) {
-        console.log('Failed', error.message);
+        console.log('Failed to start application: ', error.message);
         process.exit(1);
     }
 };
