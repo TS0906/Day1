@@ -43,7 +43,7 @@ The environment variables can be found and modified in the `.env` file. They com
 # Port number
 PORT=3000
 # URL of the Mongo DB
-MONGODB_URL=mongodb://127.0.0.1:27017/node-boilerplate
+MONGODB_URL=mongodb://127.0.0.1:27017/todo-group-api
 # JWT secret key
 JWT_SECRET=thisisasamplesecret
 # Number of days after which an access token expires
