@@ -1,15 +1,19 @@
 openapi: 3.0.0
 info:
-  title: Todo API with JWT Authentication
-  version: 1.0.0
+  title: Todo API với Quản lý Nhóm & Phân quyền
+  version: 2.0.0
   description: |
-    A simple Todo API with JWT Authentication.
-    - Đăng ký/Đăng nhập để lấy token
-    - Sử dụng token để thực hiện CRUD operations
-    - Mỗi user chỉ thấy và thao tác với todos của chính họ
+    API quản lý Todo với tính năng nhóm, invitation và phân quyền admin/user.
+    
+    **Tính năng:**
+    - ✅ Authentication với JWT
+    - ✅ Quản lý Todo cá nhân & nhóm
+    - ✅ Quản lý Nhóm & Thành viên
+    - ✅ Hệ thống Mời vào nhóm
+    - ✅ Phân quyền Admin/User
 
 servers:
-  - url: http://localhost:5000
+  - url: http://localhost:5000/api
     description: Development server
 
 components:
@@ -18,12 +22,12 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-  
+    
   schemas:
     User:
       type: object
       properties:
-        id:
+        _id:
           type: string
           example: "507f1f77bcf86cd799439011"
         name:
@@ -32,8 +36,22 @@ components:
         email:
           type: string
           example: "john@example.com"
+        role:
+          type: string
+          enum: [admin, user]
+          example: "user"
 
-    AuthResponse:
+    AuthRegisterResponse: # Sửa tên để phản ánh chỉ trả về message, không token
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Registration successful. Please log in."
+    
+    AuthLoginResponse: # Phản hồi đăng nhập (Chứa token)
       type: object
       properties:
         success:
@@ -60,20 +78,109 @@ components:
         description:
           type: string
           example: "Study Node.js fundamentals"
-        completed:
+        isCompleted: # Đã chuẩn hóa
           type: boolean
           example: false
-        user_id:
+        creatorId: # Đã chuẩn hóa
           type: string
           example: "507f1f77bcf86cd799439011"
-        created_at:
+        groupId: # Đã chuẩn hóa
+          type: string
+          nullable: true
+          example: "507f1f77bcf86cd799439013"
+        createdAt: # Đã chuẩn hóa
           type: string
           format: date-time
           example: "2023-10-01T10:00:00Z"
-        updated_at:
+        updatedAt: # Đã chuẩn hóa
           type: string
           format: date-time
           example: "2023-10-01T10:00:00Z"
+
+    Permission:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: "507f1f77bcf86cd799439015"
+        canCreateTodo:
+          type: boolean
+          example: true
+        canUpdateTodo:
+          type: boolean
+          example: true
+        canSetPermission: # Đã chuẩn hóa
+          type: boolean
+          example: false
+
+    Group:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439013"
+        name:
+          type: string
+          example: "Development Team"
+        description:
+          type: string
+          example: "Team for development projects"
+        ownerId: 
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        members: # Tối giản hóa mảng members (chỉ chứa ObjectId)
+          type: array
+          items:
+            type: string # MongoDB ObjectId string
+            example: "507f1f77bcf86cd799439015"
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+        createdAt: # Đã chuẩn hóa
+          type: string
+          format: date-time
+          example: "2023-10-01T10:00:00Z"
+        updatedAt: # Đã chuẩn hóa
+          type: string
+          format: date-time
+          example: "2023-10-01T10:00:00Z"
+
+    Invitation:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439014"
+        token:
+          type: string
+          example: "a1b2c3d4e5f6g7h8i9j0"
+        status:
+          type: string
+          enum: [pending, accepted, rejected, cancelled]
+          example: "pending"
+        expiresAt: # Đã chuẩn hóa
+          type: string
+          format: date-time
+        createdAt: # Đã chuẩn hóa
+          type: string
+          format: date-time
+        group:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+            description:
+              type: string
+        inviter: 
+          type: object
+          properties:
+            name:
+              type: string
+            email:
+              type: string
 
     Error:
       type: object
@@ -98,9 +205,10 @@ components:
           type: string
 
 paths:
-  /api/auth/register:
+  # ==================== AUTHENTICATION ====================
+  /auth/register:
     post:
-      summary: Đăng ký user mới
+      summary: Đăng ký user mới (Chỉ trả về thành công/thất bại)
       tags: [Authentication]
       requestBody:
         required: true
@@ -112,30 +220,30 @@ paths:
               properties:
                 name:
                   type: string
-                  example: "John Doe"
+                  example: "Jane Smith"
                 email:
                   type: string
-                  example: "john@example.com"
+                  example: "jane@example.com"
                 password:
                   type: string
-                  example: "password123"
+                  example: "securepwd456"
       responses:
         201:
-          description: Đăng ký thành công
+          description: Đăng ký thành công (Không trả về token)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/AuthRegisterResponse' # Dùng response chỉ có message
         400:
-          description: Lỗi validation
+          description: Lỗi validation hoặc user đã tồn tại
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/auth/login:
+  /auth/login:
     post:
-      summary: Đăng nhập user
+      summary: Đăng nhập
       tags: [Authentication]
       requestBody:
         required: true
@@ -157,15 +265,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/AuthLoginResponse' # Dùng response chứa token
         401:
-          description: Sai email hoặc password
+          description: Sai thông tin đăng nhập
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/auth/me:
+  /auth/me:
     get:
       summary: Lấy thông tin user hiện tại
       tags: [Authentication]
@@ -187,21 +295,92 @@ paths:
                       user:
                         $ref: '#/components/schemas/User'
         401:
-          description: Không có token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        403:
-          description: Token không hợp lệ
+          description: Chưa đăng nhập hoặc token không hợp lệ
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/todos:
+  /auth/users:
+    get:
+      summary: Lấy tất cả users (Admin only)
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        403:
+          description: Không có quyền admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/users/{userId}/role: # Đã chuẩn hóa tham số
+    patch:
+      summary: Cập nhật role user (Admin only)
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId # Đã chuẩn hóa
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, user]
+                  example: "admin"
+      responses:
+        200:
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+        403:
+          description: Không có quyền admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        400:
+          description: ID không hợp lệ hoặc User không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== TODOS ====================
+  /todos:
     post:
-      summary: Tạo todo mới
+      summary: Tạo todo cá nhân
       tags: [Todos]
       security:
         - bearerAuth: []
@@ -221,7 +400,7 @@ paths:
                   example: "Study Node.js fundamentals"
       responses:
         201:
-          description: Todo created successfully
+          description: Tạo todo thành công
           content:
             application/json:
               schema:
@@ -232,20 +411,14 @@ paths:
                   data:
                     $ref: '#/components/schemas/Todo'
         400:
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        401:
-          description: Unauthorized
+          description: Lỗi validation
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
 
     get:
-      summary: Lấy tất cả todos của user
+      summary: Lấy todos cá nhân (có phân trang)
       tags: [Todos]
       security:
         - bearerAuth: []
@@ -255,13 +428,11 @@ paths:
           schema:
             type: integer
             default: 1
-          description: Trang hiện tại
         - in: query
           name: limit
           schema:
             type: integer
             default: 10
-          description: Số items mỗi trang
       responses:
         200:
           description: Thành công
@@ -288,28 +459,118 @@ paths:
                             type: integer
                           total:
                             type: integer
-                          pages:
+                          totalPages:
                             type: integer
         401:
-          description: Unauthorized
+          description: Chưa đăng nhập
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/todos/{id}:
-    get:
-      summary: Lấy todo theo ID
+
+  /todos/groups/{groupId}:
+    post:
+      summary: Tạo todo cho nhóm (Cần quyền canCreateTodo)
       tags: [Todos]
       security:
         - bearerAuth: []
       parameters:
         - in: path
-          name: id
+          name: groupId
           required: true
           schema:
             type: string
-          description: Todo ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  example: "Team Meeting"
+                description:
+                  type: string
+                  example: "Weekly team meeting agenda"
+      responses:
+        201:
+          description: Tạo todo thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Todo'
+        403:
+          description: Không có quyền tạo todo trong nhóm này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        400:
+          description: Lỗi validation hoặc ID nhóm không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Lấy todos của nhóm (Cần là thành viên)
+      tags: [Todos]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Todo'
+        403:
+          description: Không có quyền truy cập nhóm (Không phải thành viên)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        400:
+          description: ID nhóm không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+
+  /todos/{todoId}: # Đã chuẩn hóa tham số
+    get:
+      summary: Lấy thông tin todo theo ID
+      tags: [Todos]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: todoId # Đã chuẩn hóa
+          required: true
+          schema:
+            type: string
       responses:
         200:
           description: Thành công
@@ -323,24 +584,29 @@ paths:
                   data:
                     $ref: '#/components/schemas/Todo'
         404:
-          description: Todo not found
+          description: Todo không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Không có quyền truy cập
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
 
-    put:
-      summary: Cập nhật todo
+    patch:
+      summary: Cập nhật nội dung todo (Chỉ Owner Todo)
       tags: [Todos]
       security:
         - bearerAuth: []
       parameters:
         - in: path
-          name: id
+          name: todoId # Đã chuẩn hóa
           required: true
           schema:
             type: string
-          description: Todo ID
       requestBody:
         required: true
         content:
@@ -350,11 +616,13 @@ paths:
               properties:
                 title:
                   type: string
+                  example: "Fix bug ABC"
                 description:
                   type: string
+                  example: "Lỗi liên quan đến auth middleware"
       responses:
         200:
-          description: Todo updated successfully
+          description: Cập nhật thành công
           content:
             application/json:
               schema:
@@ -364,62 +632,119 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/Todo'
-        400:
-          description: Validation error
+        403:
+          description: Không có quyền cập nhật (Không phải Owner)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         404:
-          description: Todo not found
+          description: Todo không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 
     delete:
-      summary: Xóa todo
+      summary: Xóa todo (Chỉ Owner Todo hoặc Admin)
       tags: [Todos]
       security:
         - bearerAuth: []
       parameters:
         - in: path
-          name: id
+          name: todoId # Đã chuẩn hóa
           required: true
           schema:
             type: string
-          description: Todo ID
       responses:
         200:
-          description: Todo deleted successfully
+          description: Xóa thành công
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
+                $ref: '#/components/schemas/SuccessResponse'
+        403:
+          description: Không có quyền xóa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         404:
-          description: Todo not found
+          description: Todo không tồn tại
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/todos/{id}/toggle:
+  /todos/{todoId}/status: # Thêm Path cập nhật trạng thái riêng
     patch:
-      summary: Toggle trạng thái completed
+      summary: Cập nhật trạng thái (completed) của todo (Cần quyền canUpdateTodo)
       tags: [Todos]
       security:
         - bearerAuth: []
       parameters:
         - in: path
-          name: id
+          name: todoId
           required: true
           schema:
             type: string
-          description: Todo ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isCompleted]
+              properties:
+                isCompleted:
+                  type: boolean
+                  example: true
       responses:
         200:
-          description: Todo status updated
+          description: Cập nhật trạng thái thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        403:
+          description: Không có quyền cập nhật trạng thái
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Todo không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+
+  # ==================== GROUPS ====================
+  /groups:
+    post:
+      summary: Tạo nhóm mới
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: "Development Team"
+                description:
+                  type: string
+                  example: "Team for development projects"
+      responses:
+        201:
+          description: Tạo nhóm thành công
           content:
             application/json:
               schema:
@@ -428,16 +753,425 @@ paths:
                   success:
                     type: boolean
                   data:
-                    $ref: '#/components/schemas/Todo'
-        404:
-          description: Todo not found
+                    $ref: '#/components/schemas/Group'
+        400:
+          description: Lỗi validation hoặc ID người dùng không hợp lệ
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /groups/admin:
+    get:
+      summary: Lấy tất cả nhóm (Admin only)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Group'
+        403:
+          description: Không có quyền admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/my-groups:
+    get:
+      summary: Lấy nhóm của user hiện tại
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Group'
+
+  /groups/{groupId}: # Đã chuẩn hóa tham số
+    get:
+      summary: Lấy thông tin nhóm theo ID (Cần là thành viên)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: groupId # Đã chuẩn hóa
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Group'
+        404:
+          description: ID nhóm không hợp lệ, Nhóm không tồn tại hoặc không có quyền truy cập
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Cập nhật nhóm (Owner/Admin only)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: groupId # Đã chuẩn hóa
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Updated Team Name"
+                description:
+                  type: string
+                  example: "Updated description"
+      responses:
+        200:
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Group'
+        403:
+          description: Không có quyền cập nhật (Không phải Owner/Admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        400:
+          description: Lỗi validation, ID không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Xóa nhóm (Owner/Admin only - Soft Delete)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: groupId # Đã chuẩn hóa
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Xóa thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        403:
+          description: Không có quyền xóa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        400:
+          description: ID không hợp lệ, Nhóm không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/{groupId}/leave:
+    post:
+      summary: Rời nhóm
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: groupId # Đã chuẩn hóa
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Rời nhóm thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        400:
+          description: ID không hợp lệ, không phải thành viên, hoặc Chủ nhóm không thể rời nhóm
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/{groupId}/permissions: 
+    post:
+      summary: Cấp/thu hồi quyền chi tiết cho thành viên (Owner/Người có quyền canSetPermission)
+      tags: [Groups]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, permissions]
+              properties:
+                userId:
+                  type: string
+                  example: "507f1f77bcf86cd799439015"
+                permissions:
+                  type: object
+                  properties:
+                    canCreateTodo:
+                      type: boolean
+                      example: true
+                    canUpdateTodo:
+                      type: boolean
+                      example: true
+                    canSetPermission:
+                      type: boolean
+                      example: false
+      responses:
+        200:
+          description: Cập nhật quyền thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Group'
+        400:
+          description: ID nhóm/người dùng không hợp lệ hoặc không phải thành viên
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        403:
+          description: Không có quyền quản lý quyền hạn trong nhóm này
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== INVITATIONS ====================
+  /invitations/groups/{groupId}/invite:
+    post:
+      summary: Mời user vào nhóm (Owner/Group Admin only)
+      tags: [Invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  example: "friend@example.com"
+      responses:
+        201:
+          description: Gửi lời mời thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Invitation'
+        403:
+          description: Không có quyền mời vào nhóm
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        400:
+          description: ID nhóm không hợp lệ, user đã là thành viên hoặc đã có lời mời pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /invitations:
+    get:
+      summary: Lấy lời mời đang chờ của user hiện tại
+      tags: [Invitations]
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invitation'
+        401:
+          description: Chưa đăng nhập
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /invitations/{token}/accept:
+    post:
+      summary: Chấp nhận lời mời vào nhóm
+      tags: [Invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Chấp nhận thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        400:
+          description: Lời mời không tồn tại/hết hạn, không dành cho bạn, hoặc đã là thành viên
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /invitations/{token}/reject:
+    post:
+      summary: Từ chối lời mời vào nhóm
+      tags: [Invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Từ chối thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        400:
+          description: Lời mời không tồn tại hoặc không dành cho bạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /invitations/{invitationId}:
+    delete:
+      summary: Hủy lời mời (Người gửi/Owner/Admin only)
+      tags: [Invitations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: invitationId
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Hủy thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        403:
+          description: Không có quyền hủy lời mời
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        400:
+          description: ID không hợp lệ, Lời mời không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+            
 tags:
   - name: Authentication
-    description: User authentication endpoints
+    description: Đăng ký, đăng nhập và quản lý user
   - name: Todos
-    description: Todo management endpoints (require authentication)
+    description: Quản lý todo cá nhân và nhóm
+  - name: Groups
+    description: Quản lý nhóm và thành viên
+  - name: Invitations
+    description: Hệ thống mời vào nhóm

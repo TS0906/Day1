@@ -9,7 +9,7 @@ export const authToken = async (req, res, next) => {
         if (!token) {
             return res.status(401).json({ 
                 success: false,
-                error: "Token khong hop le" 
+                error: "Authentication failed: No token provided" 
             });
         }
 
@@ -18,28 +18,33 @@ export const authToken = async (req, res, next) => {
         if (!tokenResult.success) {
             return res.status(401).json({ 
                 success: false,
-                error: "Token khong hop le" 
+                error: "Authentication failed: Invalid token" 
             });
         }
 
-        const userId = tokenResult.data.user_id;
+        const userId = tokenResult.data.userId;
         
         const user = await authService.getUserById(userId);
         if (!user) {
-            return res.status(403).json({ 
+            return res.status(401).json({ 
                 success: false,
-                error: "Khong thay user" 
+                error: "Authentication failed: User not found or deleted" 
             });
         }
-
-        req.user = user;
-        req.userId = userId; 
-        
+        req.user={
+            _id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+            role: user.role
+        };
+        req.userId = user._id.toString();
+        req.userRole = user.role;
         next();
     } catch(error){
+        console.error("Auth Middleware Error: ", error);
         return res.status(500).json({
             success: false,
-            error: "Failed"
+            error: "Internal Server Error"
         })
     }
 }
