@@ -41,7 +41,7 @@ components:
           enum: [admin, user]
           example: "user"
 
-    AuthRegisterResponse: # Sửa tên để phản ánh chỉ trả về message, không token
+    AuthRegisterResponse: 
       type: object
       properties:
         success:
@@ -51,7 +51,7 @@ components:
           type: string
           example: "Registration successful. Please log in."
     
-    AuthLoginResponse: # Phản hồi đăng nhập (Chứa token)
+    AuthLoginResponse: 
       type: object
       properties:
         success:
@@ -78,21 +78,21 @@ components:
         description:
           type: string
           example: "Study Node.js fundamentals"
-        isCompleted: # Đã chuẩn hóa
+        isCompleted: 
           type: boolean
           example: false
-        creatorId: # Đã chuẩn hóa
+        creatorId: 
           type: string
           example: "507f1f77bcf86cd799439011"
-        groupId: # Đã chuẩn hóa
+        groupId: 
           type: string
           nullable: true
           example: "507f1f77bcf86cd799439013"
-        createdAt: # Đã chuẩn hóa
+        createdAt: 
           type: string
           format: date-time
           example: "2023-10-01T10:00:00Z"
-        updatedAt: # Đã chuẩn hóa
+        updatedAt: 
           type: string
           format: date-time
           example: "2023-10-01T10:00:00Z"
@@ -109,7 +109,7 @@ components:
         canUpdateTodo:
           type: boolean
           example: true
-        canSetPermission: # Đã chuẩn hóa
+        canSetPermission:
           type: boolean
           example: false
 
@@ -128,20 +128,20 @@ components:
         ownerId: 
           type: string
           example: "507f1f77bcf86cd799439011"
-        members: # Tối giản hóa mảng members (chỉ chứa ObjectId)
+        members: 
           type: array
           items:
-            type: string # MongoDB ObjectId string
+            type: string
             example: "507f1f77bcf86cd799439015"
         permissions:
           type: array
           items:
             $ref: '#/components/schemas/Permission'
-        createdAt: # Đã chuẩn hóa
+        createdAt: 
           type: string
           format: date-time
           example: "2023-10-01T10:00:00Z"
-        updatedAt: # Đã chuẩn hóa
+        updatedAt: 
           type: string
           format: date-time
           example: "2023-10-01T10:00:00Z"
@@ -159,10 +159,10 @@ components:
           type: string
           enum: [pending, accepted, rejected, cancelled]
           example: "pending"
-        expiresAt: # Đã chuẩn hóa
+        expiresAt: 
           type: string
           format: date-time
-        createdAt: # Đã chuẩn hóa
+        createdAt: 
           type: string
           format: date-time
         group:
@@ -233,7 +233,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthRegisterResponse' # Dùng response chỉ có message
+                $ref: '#/components/schemas/AuthRegisterResponse'
         400:
           description: Lỗi validation hoặc user đã tồn tại
           content:
@@ -265,7 +265,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthLoginResponse' # Dùng response chứa token
+                $ref: '#/components/schemas/AuthLoginResponse'
         401:
           description: Sai thông tin đăng nhập
           content:
@@ -328,7 +328,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /auth/users/{userId}/role: # Đã chuẩn hóa tham số
+  /auth/users/{userId}/role:
     patch:
       summary: Cập nhật role user (Admin only)
       tags: [Authentication]
@@ -336,7 +336,7 @@ paths:
         - bearerAuth: []
       parameters:
         - in: path
-          name: userId # Đã chuẩn hóa
+          name: userId
           required: true
           schema:
             type: string
@@ -559,7 +559,7 @@ paths:
                 $ref: '#/components/schemas/Error'
 
 
-  /todos/{todoId}: # Đã chuẩn hóa tham số
+  /todos/{todoId}:
     get:
       summary: Lấy thông tin todo theo ID
       tags: [Todos]
@@ -567,7 +567,7 @@ paths:
         - bearerAuth: []
       parameters:
         - in: path
-          name: todoId # Đã chuẩn hóa
+          name: todoId
           required: true
           schema:
             type: string
@@ -603,7 +603,7 @@ paths:
         - bearerAuth: []
       parameters:
         - in: path
-          name: todoId # Đã chuẩn hóa
+          name: todoId
           required: true
           schema:
             type: string
@@ -653,7 +653,7 @@ paths:
         - bearerAuth: []
       parameters:
         - in: path
-          name: todoId # Đã chuẩn hóa
+          name: todoId
           required: true
           schema:
             type: string
@@ -677,7 +677,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /todos/{todoId}/status: # Thêm Path cập nhật trạng thái riêng
+  /todos/{todoId}/status: 
     patch:
       summary: Cập nhật trạng thái (completed) của todo (Cần quyền canUpdateTodo)
       tags: [Todos]
@@ -809,7 +809,7 @@ paths:
                     items:
                       $ref: '#/components/schemas/Group'
 
-  /groups/{groupId}: # Đã chuẩn hóa tham số
+  /groups/{groupId}:
     get:
       summary: Lấy thông tin nhóm theo ID (Cần là thành viên)
       tags: [Groups]
@@ -817,7 +817,7 @@ paths:
         - bearerAuth: []
       parameters:
         - in: path
-          name: groupId # Đã chuẩn hóa
+          name: groupId
           required: true
           schema:
             type: string
@@ -847,7 +847,7 @@ paths:
         - bearerAuth: []
       parameters:
         - in: path
-          name: groupId # Đã chuẩn hóa
+          name: groupId
           required: true
           schema:
             type: string
@@ -896,7 +896,7 @@ paths:
         - bearerAuth: []
       parameters:
         - in: path
-          name: groupId # Đã chuẩn hóa
+          name: groupId
           required: true
           schema:
             type: string
@@ -928,7 +928,7 @@ paths:
         - bearerAuth: []
       parameters:
         - in: path
-          name: groupId # Đã chuẩn hóa
+          name: groupId
           required: true
           schema:
             type: string

@@ -30,6 +30,15 @@ const UserSchema = new mongoose.Schema({
         default: false,
         required: true,
     },
+    dailyLimit:{
+        type: Number,
+        default: null,
+        min: 1
+    },
+    limitActive:{
+        type: Boolean,
+        default: false
+    },
 },{
     versionKey: false,
     timestamps: true
