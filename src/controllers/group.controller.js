@@ -24,7 +24,7 @@ export const groupController = {
     },
     getMyGroups: async (req, res) =>{
         try{
-            const result = await groupService.getGroupByUser(req.user._id, req.user.role);
+            const result = await groupService.getGroupByUser(req.params.groupId);
             if(result.success){
                 res.status(200).json({
                     success: true,
@@ -45,8 +45,7 @@ export const groupController = {
     },
     getGroupById: async(req, res) =>{
         try{
-            const result = await groupService.getGroupById(req.params.groupId, req.user._id, req.user.role);
-
+            const result = await groupService.getGroupById(req.params.groupId);
             if(result.success){
                 res.status(200).json({  
                     success: true,
@@ -67,16 +66,14 @@ export const groupController = {
     },
     updateGroup: async(req, res) => {
         try{
-            const result = await groupService.updateGroup(req.user.role, req.user._id, req.params.groupId, req.body);
-
+            const result = await groupService.updateGroup(req.params.groupId, req.body, req.user._id, req.user.role);
             if(result.success){
-                res.status(200).json({
+                res.json({
                     success: true,
                     data: result.data
                 });
             } else{
-                const statusCode = result.errors && result.errors.includes('Permission denied') ? 403 : 400;
-                res.status(statusCode).json({
+                res.status(400).json({
                     success: false,
                     errors: result.errors
                 });
@@ -90,15 +87,14 @@ export const groupController = {
     },
     deleteGroup: async(req, res) =>{
         try{
-            const result = await groupService.deleteGroup(req.user.role, req.user._id, req.params.groupId);
+            const result = await groupService.deleteGroup(req.params.groupId, req.user._id, req.user.role);
             if(result.success){
                 res.json({
                     success: true,
                     message: result.message
                 });
             } else{
-                const statusCode = result.errors && result.errors.includes('Permission denied') ? 403 : 404;
-                res.status(statusCode).json({
+                res.status(403).json({
                     success: false,
                     errors: result.errors
                 });
@@ -154,26 +150,22 @@ export const groupController = {
     },
     setGroupPermissions: async(req, res) => {
         try{
-            const groupId = req.params.groupId;
-            const targetUserId = req.body.userId;
-            const newPermissions = req.body.permissions;
-
             const result = await groupService.setGroupPermissions(
-                groupId,
+                req.params.groupId,
+                req.body.userId,
+                req.body.permissions,
                 req.user._id,
-                targetUserId,
-                newPermissions
+                req.user.role
             );
 
             if(result.success){
-                res.status(200).json({
+                res.json({
                     success: true,
                     data: result.data,
                     message: "Permissions updated successfully"
                 });
             } else{
-                const statusCode = result.errors.includes('Permission denied') ? 403 : 400;
-                res.status(statusCode).json({
+                res.status(403).json({
                     success: false,
                     errors: result.errors
                 });
@@ -185,4 +177,4 @@ export const groupController = {
             });
         }
     }
-}
+};

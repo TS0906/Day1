@@ -4,33 +4,11 @@ export const invitationController = {
     createInvitation: async(req, res) => {
         try{
             const result = await invitationService.createInvitation(
-                { groupId: req.params.groupId, inviteeEmail: req.body.email },
+                req.body,
                 req.user._id
             );
             if(result.success){
                 res.status(201).json({
-                    success: true,
-                    data: result.data
-                });
-            } else{
-                const statusCode = result.errors && (result.errors.includes('Permission denied') || result.errors.includes('Group not found')) ? 403 : 400;
-                res.status(statusCode).json({
-                    success: false,
-                    errors: result.errors
-                });
-            }
-        } catch (error){
-            res.status(500).json({
-                success: false,
-                error: "Internal Server Error"
-            })
-        }
-    },
-    getMyInvitations: async (req, res) => {
-        try{
-            const result = await invitationService.getInvitationsByUser(req.user._id);
-            if(result.success){
-                res.json({
                     success: true,
                     data: result.data
                 });
@@ -41,6 +19,19 @@ export const invitationController = {
                 });
             }
         } catch (error){
+            console.error("createInvitation fail", error);
+            res.status(500).json({
+                success: false,
+                error: "Internal Server Error"
+            })
+        }
+    },
+    getMyInvitations: async (req, res) => {
+        try{
+            const result = await invitationService.getInvitationsByUser(req.user._id);
+            return res.json({success: true, data: result.data});
+        } catch (error){
+            console.error("getMyInvitations error", error);
             res.status(500).json({
                 success: false,
                 error: "Internal Server Error"
@@ -62,6 +53,7 @@ export const invitationController = {
                 })
             }
         } catch(error){
+            console.error("acceptInvitation error:", error);
             res.status(500).json({
                 success: false,
                 error: "Internal Server Error"
@@ -83,6 +75,7 @@ export const invitationController = {
                 })
             }
         } catch(error){
+            console.error("rejectInvitation error:", error);
             res.status(500).json({
                 success: false,
                 error: "Internal Server Error"
@@ -102,19 +95,13 @@ export const invitationController = {
                     message: result.message
                 });
             } else{
-                const isPermissionError = result.errors && result.errors.includes('Permission denied');
-                const isNotFoundError = result.errors && result.errors.includes('Invitation not found');
-                
-                let statusCode = 400;
-                if (isPermissionError) statusCode = 403;
-                else if (isNotFoundError) statusCode = 404;
-
-                res.status(statusCode).json({
+                res.status(403).json({
                     success: false,
                     errors: result.errors
                 })
             }
         } catch(error){
+            console.error("cancelInvitation error:", error);
             res.status(500).json({
                 success: false,
                 error: "Loi"

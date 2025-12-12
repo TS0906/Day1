@@ -40,7 +40,7 @@ const GroupSchema = new mongoose.Schema({
         ref: 'User',
         default: [],
     },
-    permission: {
+    permissions: {
         type: [PermissionSchema],
         default: [],
     },
