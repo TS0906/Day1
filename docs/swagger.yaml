@@ -1,16 +1,9 @@
 openapi: 3.0.0
 info:
-  title: Todo API với Quản lý Nhóm & Phân quyền
+  title: Todo API với Quản lý Nhóm, Phân quyền & Money Tracker
   version: 2.0.0
   description: |
-    API quản lý Todo với tính năng nhóm, invitation và phân quyền admin/user.
-    
-    **Tính năng:**
-    - ✅ Authentication với JWT
-    - ✅ Quản lý Todo cá nhân & nhóm
-    - ✅ Quản lý Nhóm & Thành viên
-    - ✅ Hệ thống Mời vào nhóm
-    - ✅ Phân quyền Admin/User
+    API quản lý Todo với tính năng nhóm, invitation, phân quyền admin/user và Money Tracker (thu/chi, category, thống kê, limit theo ngày).
 
 servers:
   - url: http://localhost:5000/api
@@ -22,7 +15,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-    
+
   schemas:
     User:
       type: object
@@ -41,7 +34,7 @@ components:
           enum: [admin, user]
           example: "user"
 
-    AuthRegisterResponse: 
+    AuthRegisterResponse:
       type: object
       properties:
         success:
@@ -50,8 +43,8 @@ components:
         message:
           type: string
           example: "Registration successful. Please log in."
-    
-    AuthLoginResponse: 
+
+    AuthLoginResponse:
       type: object
       properties:
         success:
@@ -78,21 +71,21 @@ components:
         description:
           type: string
           example: "Study Node.js fundamentals"
-        isCompleted: 
+        isCompleted:
           type: boolean
           example: false
-        creatorId: 
+        creatorId:
           type: string
           example: "507f1f77bcf86cd799439011"
-        groupId: 
+        groupId:
           type: string
           nullable: true
           example: "507f1f77bcf86cd799439013"
-        createdAt: 
+        createdAt:
           type: string
           format: date-time
           example: "2023-10-01T10:00:00Z"
-        updatedAt: 
+        updatedAt:
           type: string
           format: date-time
           example: "2023-10-01T10:00:00Z"
@@ -125,10 +118,10 @@ components:
         description:
           type: string
           example: "Team for development projects"
-        ownerId: 
+        ownerId:
           type: string
           example: "507f1f77bcf86cd799439011"
-        members: 
+        members:
           type: array
           items:
             type: string
@@ -137,11 +130,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Permission'
-        createdAt: 
+        createdAt:
           type: string
           format: date-time
           example: "2023-10-01T10:00:00Z"
-        updatedAt: 
+        updatedAt:
           type: string
           format: date-time
           example: "2023-10-01T10:00:00Z"
@@ -159,10 +152,10 @@ components:
           type: string
           enum: [pending, accepted, rejected, cancelled]
           example: "pending"
-        expiresAt: 
+        expiresAt:
           type: string
           format: date-time
-        createdAt: 
+        createdAt:
           type: string
           format: date-time
         group:
@@ -174,13 +167,73 @@ components:
               type: string
             description:
               type: string
-        inviter: 
+        inviter:
           type: object
           properties:
             name:
               type: string
             email:
               type: string
+
+    Category:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "65a1f77bcf86cd799439099"
+        name:
+          type: string
+          example: "Ăn uống"
+        type:
+          type: string
+          enum: [Income, Expense]
+          example: "Expense"
+
+    Transaction:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "65a1f77bcf86cd799439100"
+        ownerId:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        categoryId:
+          type: string
+          example: "65a1f77bcf86cd799439099"
+        amount:
+          type: number
+          example: 50000
+        type:
+          type: string
+          enum: [Income, Expense]
+          example: "Expense"
+        date:
+          type: string
+          format: date
+          example: "2025-01-20"
+        note:
+          type: string
+          example: "Mua trà sữa"
+        isDeleted:
+          type: boolean
+          example: false
+
+    MonthlySummaryItem:
+      type: object
+      properties:
+        month:
+          type: integer
+          example: 1
+        income:
+          type: number
+          example: 5000000
+        expense:
+          type: number
+          example: 3000000
+        net:
+          type: number
+          example: 2000000
 
     Error:
       type: object
@@ -190,10 +243,12 @@ components:
           example: false
         error:
           type: string
+          example: "Validation error"
         errors:
           type: array
           items:
             type: string
+          example: ["Email is invalid", "Password is required"]
 
     SuccessResponse:
       type: object
@@ -203,6 +258,7 @@ components:
           example: true
         message:
           type: string
+          example: "Operation successful"
 
 paths:
   # ==================== AUTHENTICATION ====================
@@ -468,7 +524,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-
   /todos/groups/{groupId}:
     post:
       summary: Tạo todo cho nhóm (Cần quyền canCreateTodo)
@@ -558,7 +613,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-
   /todos/{todoId}:
     get:
       summary: Lấy thông tin todo theo ID
@@ -645,7 +699,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-
     delete:
       summary: Xóa todo (Chỉ Owner Todo hoặc Admin)
       tags: [Todos]
@@ -677,9 +730,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /todos/{todoId}/status: 
+  /todos/{todoId}/status:
     patch:
-      summary: Cập nhật trạng thái (completed) của todo (Cần quyền canUpdateTodo)
+      summary: Cập nhật trạng thái (completed) của todo
       tags: [Todos]
       security:
         - bearerAuth: []
@@ -719,7 +772,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
 
   # ==================== GROUPS ====================
   /groups:
@@ -946,7 +998,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /groups/{groupId}/permissions: 
+  /groups/{groupId}/permissions:
     post:
       summary: Cấp/thu hồi quyền chi tiết cho thành viên (Owner/Người có quyền canSetPermission)
       tags: [Groups]
@@ -1165,7 +1217,259 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-            
+
+  # ==================== MONEY TRACKER ====================
+  /money/categories:
+    post:
+      summary: Tạo category mới (Income/Expense)
+      tags: [Money Tracker]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name:
+                  type: string
+                  example: "Ăn uống"
+                type:
+                  type: string
+                  enum: [Income, Expense]
+                  example: "Expense"
+      responses:
+        201:
+          description: Category created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Category'
+        400:
+          description: Category name đã tồn tại hoặc dữ liệu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Lấy danh sách category của user
+      tags: [Money Tracker]
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+
+  /money/transactions:
+    post:
+      summary: Tạo transaction (Income/Expense)
+      tags: [Money Tracker]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [categoryId, amount, type, date]
+              properties:
+                categoryId:
+                  type: string
+                  example: "65a1f77bcf86cd799439099"
+                amount:
+                  type: number
+                  example: 50000
+                type:
+                  type: string
+                  enum: [Income, Expense]
+                  example: "Expense"
+                date:
+                  type: string
+                  format: date
+                  example: "2025-01-20"
+                note:
+                  type: string
+                  example: "Mua trà sữa"
+      responses:
+        201:
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Transaction'
+        400:
+          description: Validation error hoặc category không thuộc user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Lấy transaction theo filter
+      tags: [Money Tracker]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: categoryId
+          required: false
+          schema:
+            type: string
+            example: "65a1f77bcf86cd799439099"
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [Income, Expense]
+            example: "Expense"
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date
+            example: "2025-01-01"
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date
+            example: "2025-01-31"
+      responses:
+        200:
+          description: Filtered transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+
+  /money/transactions/{transactionId}:
+    delete:
+      summary: Xóa transaction (soft delete)
+      tags: [Money Tracker]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: transactionId
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        404:
+          description: Transaction not found or unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /money/summary:
+    get:
+      summary: Xem tổng thu/chi theo từng tháng trong năm
+      tags: [Money Tracker]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          required: false
+          schema:
+            type: integer
+            example: 2025
+      responses:
+        200:
+          description: Summary by month
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MonthlySummaryItem'
+
+  /money/limit:
+    patch:
+      summary: Đặt hoặc cập nhật daily spending limit
+      tags: [Money Tracker]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limitActive:
+                  type: boolean
+                  example: true
+                dailyLimit:
+                  type: number
+                  example: 200000
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+        400:
+          description: Invalid limit hoặc user không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 tags:
   - name: Authentication
     description: Đăng ký, đăng nhập và quản lý user
@@ -1175,3 +1479,5 @@ tags:
     description: Quản lý nhóm và thành viên
   - name: Invitations
     description: Hệ thống mời vào nhóm
+  - name: Money Tracker
+    description: Quản lý thu/chi, category, thống kê và limit theo ngày

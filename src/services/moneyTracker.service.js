@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import TransactionModel from "../models/transaction.js";
 import CategoryModel from "../models/category.js";
 import UserModel from "../models/user.js";
+import { sendLimitExceededEmail } from "../utils/email.util.js";
 
 const createCategory = async (categoryBody, userId) =>{
     if(await CategoryModel.findOne({name: categoryBody.name, ownerId: userId, isDeleted: false})){
@@ -10,9 +11,8 @@ const createCategory = async (categoryBody, userId) =>{
             message: 'Category name already exists for this user.'
         }
     };
-    const newCategory = new CategoryModel({...categoryBody, ownerId: userId});
     try{
-        const category = await newCategory.save();
+        const category = await CategoryModel.create({ ...categoryBody, ownerId: userId });
         return{
             success: true,
             data: category
@@ -30,56 +30,63 @@ const createCategory = async (categoryBody, userId) =>{
         };
     }
 };
-const getCategoryByUserId = async (categoryBody, userId) => {
-    const categories = await CategoryModel.findOne({ownerId: userId, isDeleted: false});
+const getCategoryByUserId = async (userId) => {
+    const categories = await CategoryModel.find({ownerId: userId, isDeleted: false});
     return {
         success: true,
         data: categories
     };
 };
 const createTransaction = async (transactionBody, userId) => {
-    const category = await CategoryModel.findOne({
-        _id: transactionBody.categoryId,
-        ownerId: userId,
-        isDeleted: false
-    });
-    if(!category){
-        return{
-            success: false,
-            message: 'Category not found or does not belong to user.'
-        }
-    }
-    if(category.type !== transactionBody.type){
-        return {
-            success: false,
-            message: `Transaction type must be ' ${category.type}' to match the category`
-        };
-    }
-    if(transactionBody.type === 'Expense') {
-        const user = await UserModel.findById(userId);
-        if(user && user.limitActive && user.dailyLimit > 0) {
-            const transactionDate = new Date(transactionBody.date);
-            const startOfDay = new Date(transactionDate);
-            startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(transactionDate);
-            endOfDay.setHours(23, 59, 59, 999);
-            const todayExpensesResult = await TransactionModel.aggregate([
-                {
-                    $match:{
-                        ownerId: user._id,
-                        type: 'Expense',
-                        isDeleted: false,
-                        date: {$gte: startOfDay, $lte: endOfDay},
-                    },
-                },
-                {$group: {_id: null, total: {$sum: '$amount'}}},
-            ]);
-            const currentTotalSpent = todayExpensesResult.length > 0 ? todayExpensesResult[0].total : 0;
-            const newTotalSpent = currentTotalSpent + transactionBody.amount;
-            if(newTotalSpent > user.dailyLimit){
-                console.warn(`[DAILY LIMIT ALERT] User ${userId} exceeded limit (${user.dailyLimit}). New total: ${newTotalSpent.toFixed(2)}`);
+    try {
+        const category = await CategoryModel.findOne({
+            _id: transactionBody.categoryId,
+            ownerId: userId,
+            isDeleted: false
+        });
+        if(!category){
+            return{
+                success: false,
+                message: 'Category not found or does not belong to user.'
             }
         }
+        if(category.type !== transactionBody.type){
+            return{
+                success: false,
+                message: `Transaction type must be '${category.type}' to match the category`
+            };
+        }
+        const newTransaction = await TransactionModel.create({
+            ...transactionBody,
+            ownerId: userId,
+        });
+        const user = await UserModel.findById(userId);
+        if(newTransaction.type === 'Expense'){
+            if(user && user.limitActive && user.dailyLimit && user.dailyLimit > 0) {
+                const transactionDate = new Date(transactionBody.date);
+                const startOfDay = new Date(transactionDate);
+                startOfDay.setHours(0, 0, 0, 0);
+                const endOfDay = new Date(transactionDate);
+                endOfDay.setHours(23, 59, 59, 999);
+                const todayExpensesResult = await TransactionModel.aggregate([
+                    { $match:{ ownerId: user._id, type: 'Expense', isDeleted: false, date: {$gte: startOfDay, $lte: endOfDay} } },
+                    { $group: {_id: null, total: {$sum: '$amount'}}}
+                ]);          
+                const totalSpent = todayExpensesResult.length > 0 ? todayExpensesResult[0].total : 0;  
+                if(totalSpent > user.dailyLimit){
+                    await sendLimitExceededEmail(
+                        user.email,
+                        user.name,
+                        user.dailyLimit,
+                        totalSpent
+                    );
+                }
+            }
+        }
+        return {success: true, data: transaction};
+    } catch (error) {
+        console.error("Error creating transaction: ", error);
+        return {success: false, message: 'Internal Server Error'};
     }
 };
 const getTransactionsWithFilters = async (userId, filters) => {
@@ -146,7 +153,10 @@ const updateDailyLimit = async (userId, updateBody) => {
         if(updateBody.dailyLimit < 0){
             return {success: false, message: 'Daily limit cannot be negative.'};
         }
-        user.dailyLimit = updateBody.limitActive;
+        user.dailyLimit = updateBody.dailyLimit;
+    }
+    if(updateBody.limitActive!==undefined){
+        user.limitActive = updateBody.limitActive;
     }
     await user.save();
     return{success: true, date: user};

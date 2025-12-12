@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.use(authToken);
 
+router.get('/admin', authorizeRole(['admin']), groupController.getAllGroups);
 router.post('/', groupController.createGroup);
 router.get('/my-groups', groupController.getMyGroups);
 router.get('/:groupId', checkGroupPermission('isMember'), groupController.getGroupById);

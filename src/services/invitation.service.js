@@ -12,7 +12,6 @@ const createInvitation = async (invitationData, inviterId) => {
         if(!ObjectId.isValid(inviterId)|| !ObjectId.isValid(groupId)){
             return {success: false, errors: ["Invalid ID provided."]};
         }
-
         const groupObjectId = new ObjectId(groupId);
         const inviterObjectId = new ObjectId(inviterId);
         const invitedUser = await UserModel.findOne({ email: inviteeEmail.toLowerCase() });
@@ -45,14 +44,15 @@ const createInvitation = async (invitationData, inviterId) => {
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 7*24*60*60*1000); // 7 days from now
 
-        const invitation = {
+        const invitation = await InvitationModel.create({
             groupId: groupObjectId,
             inviterId: inviterObjectId,
             invitedUserId: invitedUserId, 
             inviteeEmail: inviteeEmail.toLowerCase(),
             token: token,
-            expiresAt: expiresAt
-        };
+            expiresAt: expiresAt,
+            isDeleted: false
+        });
         const inviter = await UserModel.findOne({_id: inviterObjectId}).select('name');
         return {success: true, data: {
                 ...invitation.toJSON(),

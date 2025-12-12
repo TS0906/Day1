@@ -15,7 +15,6 @@ export const authController = {
                     errors: result.errors
                 });
             }
-
         } catch(error){
             res.status(500).json({
                 success: false,
@@ -26,8 +25,7 @@ export const authController = {
 
     login: async (req, res) => {
         try{
-            const result = await authService.login(req.body);
-            
+            const result = await authService.login(req.body);          
             if (result.success) {
                 res.json({
                     success: true,
@@ -47,24 +45,15 @@ export const authController = {
         }
     },
     getMe: async (req, res) => {
-        try {
-            res.json({
-                success: true,
-                data: {
-                    user: {
-                        id: req.user._id,
-                        name: req.user.name,
-                        email: req.user.email,
-                        role: req.user.role
-                    }
-                }
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: "Internal Server Error"
-            });
-        }
+        return res.json({
+            success: true, 
+            data: {
+                id: req.user._id,
+                name: req.user.name,
+                email: req.user.email,
+                role: req.user.role,
+            }
+        });
     },
     getAllUsers: async (req, res) => {
         try {
@@ -111,4 +100,4 @@ export const authController = {
             });
         }
     }
-}
+};

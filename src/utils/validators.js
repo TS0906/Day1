@@ -1,7 +1,12 @@
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
+
+const isValidObjectId = (id) =>{
+     return id && typeof id === 'string' && mongoose.Types.ObjectId.isValid(id);
+}
 export const validateRegister = (userData) => {
     const errors=[];
-
+    if (!userData) errors.push("Invalid data");
     if(!userData.name||userData.name.trim().length < 2) {
           errors.push("Name is too short");
     }
@@ -13,7 +18,7 @@ export const validateRegister = (userData) => {
           errors.push("Password must be at least 6 characters");
     }
     return {
-          isvalid: errors.length === 0,
+          isValid: errors.length === 0,
           errors
     };
 };
@@ -47,13 +52,10 @@ export const validateTransaction = (transaction) =>{
      if(!transaction?.type || !['Income', 'Expense'].includes(transaction.type)){
           errors.push("Invalid transaction type");
      }
-     if(!transaction?.amount || typeof transaction.amount !== "number" || transaction.amount <= 0){
+     if(typeof transaction.amount !== "number" || transaction.amount <= 0){
           errors.push("Amount must be a number greater than 0");
      }
-     if(!transaction?.categoryId || transaction.categoryId.length !== 24){
-          errors.push("Invalid category ID");
-     }
-     if(!transaction?.categoryId || transaction.categoryId.length !== 24){
+     if(!isValidObjectId(transaction?.categoryId)){
           errors.push("Invalid category ID");
      }
      if(!transaction?.date || isNaN(Date.parse(transaction.date))){
@@ -66,10 +68,12 @@ export const validateTransaction = (transaction) =>{
 };
 export const validateSetLimit = (data) => {
      const errors = [];
-     if(typeof data.dailyLimit !== "number" || data.dailyLimit <= 0){
-          errors.push("Daily limit must be a number greater than 0");
+     if(data?.dailyLimit !== undefined){
+          if(typeof data?.dailyLimit !== "number" || data.dailyLimit < 0){
+          errors.push("Daily limit must be a number greater than or equal to 0");
      }
-     if(typeof data.limitActive !== "boolean"){
+     }
+     if(data?.limitActive !== undefined && typeof data.limitActive !== "boolean"){
           errors.push("limitActive must be either true or false");
      }
      return {
@@ -82,7 +86,7 @@ export const validateStatsQuery = (query) =>{
      if(query.type && !["Income", "Expense"].includes(query.type)){
           errors.push("Invalid type filter");
      }
-     if(query.categoryId && query.categoryId.length !== 24){
+     if(query.categoryId && !isValidObjectId(query.categoryId)){
           errors.push("Invalid category ID");
      }
      if(query.from && isNaN(Date.parse(query.from))){

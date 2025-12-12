@@ -1,17 +1,12 @@
 import mongoose from "mongoose";
 import TransactionModel from "../models/transaction.js";
 
-const isValidObjectId = (id) =>{
-    return id && typeof id === 'string' && mongoose.Types.ObjectId.isValid(id);
-};
-const checkTransactionOwnership = async (req, res, next) => {
+export const checkTransactionOwnership = async (req, res, next) => {
     try {
-        const transactionId = req.params.transactionId;
-        if(!transactionId || !isValidObjectId(transactionId)){
-            return res.status(400).json({
-                success: false,
-                errors: ['Invalid Transaction ID format. '],
-            });
+        const {transactionId} = req.params;
+        const userId = req.user._id;
+        if(!ObjectId.isValid(transactionId)){
+            return res.status(400).json({success: false, error: "Invalid transaction ID"});
         }
         const transaction = await TransactionModel.findOne({
             _id: transactionId,
@@ -23,21 +18,19 @@ const checkTransactionOwnership = async (req, res, next) => {
                 errors: ['Transaction not found.']
             });
         }
-        if(transaction.ownerId.toString() !== req.user._id.toString()){
+        if(transaction.ownerId.toString() !== userId.toString() && req.user.role !== "admin"){
             return res.status(403).json({
                 success: false,
                 errors: ['Permission denied, you do not own this resource.']
             });
         }
+        req.transaction = transaction;
         next();
     } catch (error) {
-        console.error("Transaction Ownership Middleware Error", error);
+        console.error("TransactionOwner Error", error);
         return res.status(500).json({
             success: false,
             error: "Internal Server Error"
         });
     }
-};
-export const moneyTrackerMiddleware = {
-    checkTransactionOwnership,
 };
