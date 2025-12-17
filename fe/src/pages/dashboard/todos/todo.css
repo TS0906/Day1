@@ -1,0 +1,143 @@
+/* Layout & Container */
+.todos-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.todos-header, .todos-footer, .pager, .todo-form, .todo-left, .filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.todos-header, .todos-footer {
+  justify-content: space-between;
+}
+
+/* Base Components */
+.card {
+  background: #151515;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #111;
+  color: #fff;
+}
+
+.btn {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #1b1b1b;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary { background: #2d7cff; border: none; }
+.btn-danger { background: #ff3b3b; border: none; }
+
+/* Filter Tabs */
+.filter-tabs {
+  padding: 8px;
+  background: #1a1a1a;
+}
+
+.filter-btn {
+  flex: 1;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.filter-btn.active {
+  background: #2d7cff;
+  color: #fff;
+}
+
+/* Todo Items */
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #2a2a2a;
+  transition: all 0.2s ease;
+}
+
+.todo-item.done {
+  background: #0f172a !important;
+  border-color: #22c55e !important;
+  opacity: 0.6;
+}
+
+.todo-left { flex: 1; }
+
+.todo-title {
+  font-size: 14px;
+  line-height: 1.4;
+  color: #fff;
+}
+
+.todo-title.done {
+  text-decoration: line-through;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Badges */
+.todo-badge {
+  margin-left: 10px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.todo-badge.done {
+  background: #22c55e;
+  color: #000;
+  font-weight: bold;
+}
+
+.todo-badge.pending {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  border: 1px solid #fbbf24;
+}
+
+/* Helpers & Alerts */
+.muted { opacity: 0.75; }
+
+.alert {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.alert-error {
+  background: rgba(255, 59, 59, 0.12);
+  border-color: rgba(255, 59, 59, 0.35);
+}

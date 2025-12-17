@@ -23,10 +23,6 @@ const TodoSchema = new mongoose.Schema({
         enum: ["pending", "completed"],
         default: "pending",
     },
-    isCompleted: {
-        type: Boolean,
-        default: false
-    },
     isDeleted: {
         type: Boolean,
         default: false,

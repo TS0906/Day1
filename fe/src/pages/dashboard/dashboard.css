@@ -1,0 +1,226 @@
+
+.dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: #1e1e1e;
+  color: #ffffff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+.sidebar {
+  width: 220px;
+  background: #111;
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 32px;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar nav a {
+  color: #bbb;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidebar nav a:hover {
+  background: #222;
+  color: #fff;
+}
+
+.sidebar nav a.active {
+  background: #2a2a2a;
+  color: #4caf50;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  height: 56px;
+  background: #222;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-sizing: border-box;
+  border-bottom: 1px solid #333;
+}
+
+.header span {
+  font-size: 14px;
+  color: #ccc;
+}
+
+.header button {
+  background: #e53935;
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.header button:hover {
+  background: #d32f2f;
+}
+
+
+.content {
+  flex: 1;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+
+.dashboard-home {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+
+.welcome h1 {
+  margin: 0 0 4px 0;
+  font-size: 26px;
+}
+
+.user-email {
+  color: #aaa;
+  font-size: 14px;
+}
+
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background: #2a2a2a;
+  padding: 16px;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.stat-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #ddd;
+}
+
+.stat-number {
+  font-size: 28px;
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.stat-hint {
+  font-size: 12px;
+  color: #aaa;
+}
+
+
+.quick-actions h2 {
+  margin-bottom: 12px;
+  font-size: 18px;
+}
+
+.actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.actions a {
+  padding: 10px 14px;
+  background: #333;
+  border-radius: 6px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.actions a:hover {
+  background: #4caf50;
+}
+
+.page-title {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: #2a2a2a;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.btn {
+  padding: 8px 14px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background: #4caf50;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #43a047;
+}
+
+.btn-danger {
+  background: #e53935;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #d32f2f;
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .sidebar nav {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .logo {
+    margin-bottom: 0;
+  }
+}

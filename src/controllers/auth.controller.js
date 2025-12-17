@@ -47,12 +47,12 @@ export const authController = {
     getMe: async (req, res) => {
         return res.json({
             success: true, 
-            data: {
-                id: req.user._id,
+            user: {
+                _id: req.user._id,
                 name: req.user.name,
                 email: req.user.email,
                 role: req.user.role,
-            }
+            },
         });
     },
     getAllUsers: async (req, res) => {
