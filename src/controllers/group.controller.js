@@ -4,17 +4,10 @@ export const groupController = {
     createGroup: async (req, res) =>{
         try{
             const result = await groupService.createGroup(req.body, req.user._id);
-            if(result.success){
-                res.status(201).json({
-                    success: true,
-                    data: result.data
-                });
-            } else{
-                res.status(400).json({
-                    success: false, 
-                    errors: ["Create group failed"]
-                });
+            if (result.success) {
+                return res.status(201).json({ success: true, data: result.data });
             }
+            return res.status(400).json({ success: false, errors: result.errors });
         } catch(error){
             res.status(500).json({
                 success: false,
@@ -24,18 +17,11 @@ export const groupController = {
     },
     getMyGroups: async (req, res) =>{
         try{
-            const result = await groupService.getGroupByUser(req.params.groupId);
-            if(result.success){
-                res.status(200).json({
-                    success: true,
-                    data: result.data
-                });
-            } else{
-                res.status(400).json({
-                    success: false,
-                    errors: ["Cannot find groups for user"]
-                });
+            const result = await groupService.getGroupByUser(req.user._id, req.user.role);
+            if (result.success) {
+                return res.status(200).json({ success: true, data: result.data });
             }
+            return res.status(400).json({ success: false, errors: result.errors });
         } catch(error){
             res.status(500).json({
                 success: false,
@@ -45,18 +31,11 @@ export const groupController = {
     },
     getGroupById: async(req, res) =>{
         try{
-            const result = await groupService.getGroupById(req.params.groupId);
-            if(result.success){
-                res.status(200).json({  
-                    success: true,
-                    data: result.data
-                });
-            } else{
-                res.status(404).json({
-                    success: false,
-                    errors: ["Group not found or access denied"]
-                });
+            const result = await groupService.getGroupById(req.params.groupId, req.user._id, req.user.role);
+            if (result.success) {
+                return res.status(200).json({ success: true, data: result.data });
             }
+            return res.status(403).json({ success: false, errors: result.errors });
         } catch(error){
             res.status(500).json({
                 success: false,
@@ -67,17 +46,10 @@ export const groupController = {
     updateGroup: async(req, res) => {
         try{
             const result = await groupService.updateGroup(req.params.groupId, req.body, req.user._id, req.user.role);
-            if(result.success){
-                res.json({
-                    success: true,
-                    data: result.data
-                });
-            } else{
-                res.status(400).json({
-                    success: false,
-                    errors: result.errors
-                });
+            if(result.success) {
+                return res.status(200).json({success: true, data: result.data});
             }
+            return res.status(403).json({success: false, errors: result.errors});
         } catch(error){
             res.status(500).json({
                 success: false,
@@ -88,17 +60,10 @@ export const groupController = {
     deleteGroup: async(req, res) =>{
         try{
             const result = await groupService.deleteGroup(req.params.groupId, req.user._id, req.user.role);
-            if(result.success){
-                res.json({
-                    success: true,
-                    message: result.message
-                });
-            } else{
-                res.status(403).json({
-                    success: false,
-                    errors: result.errors
-                });
+            if (result.success) {
+                return res.status(200).json({ success: true, message: result.message });
             }
+            return res.status(403).json({ success: false, errors: result.errors });
         } catch(error){
             res.status(500).json({
                 success: false,
@@ -109,17 +74,10 @@ export const groupController = {
     leaveGroup: async(req, res) => {
         try{
             const result = await groupService.leaveGroup(req.params.groupId, req.user._id);
-            if(result.success){
-                res.json({
-                    success: true,
-                    message: result.message
-                });
-            } else{
-                res.status(400).json({
-                    success: false,
-                    errors: result.errors
-                });
+            if (result.success) {
+                return res.status(200).json({ success: true, message: result.message });
             }
+            return res.status(400).json({ success: false, errors: result.errors });
         } catch(error){
             res.status(500).json({
                 success: false,
@@ -130,17 +88,13 @@ export const groupController = {
     getAllGroups: async(req, res) => {
         try{
             const result = await groupService.getAllGroups(req.user.role);
-            if(result.success){
-                res.json({
-                    success: true,
-                    data: result.data
-                });
-            } else{
-                res.status(403).json({
-                    success: false,
-                    errors: result.errors || ["Admin access required"]
-                });
+            if (result.success) {
+                return res.status(200).json({ success: true, data: result.data });
             }
+            return res.status(403).json({
+                success: false,
+                errors: result.errors || ["Admin access required"]
+            });
         }catch(error){
             res.status(500).json({
                 success: false,
@@ -157,19 +111,14 @@ export const groupController = {
                 req.user._id,
                 req.user.role
             );
-
-            if(result.success){
-                res.json({
+            if (result.success) {
+                return res.status(200).json({
                     success: true,
                     data: result.data,
                     message: "Permissions updated successfully"
                 });
-            } else{
-                res.status(403).json({
-                    success: false,
-                    errors: result.errors
-                });
             }
+            return res.status(403).json({ success: false, errors: result.errors });
         }catch(error){
             res.status(500).json({
                 success: false,

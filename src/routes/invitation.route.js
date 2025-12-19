@@ -7,11 +7,11 @@ const router = express.Router();
 
 router.use(authToken);
 
-router.post('/groups/:groupId/invite', checkGroupPermission('canSetPermission'), invitationController.createInvitation);
+router.get("/search-user", authToken, invitationController.searchUser);
 router.get('/', invitationController.getMyInvitations);
+router.post('/groups/:groupId/invite', checkGroupPermission('canSetPermission'), invitationController.createInvitation);
 router.post('/:token/accept', invitationController.acceptInvitation);
 router.post('/:token/reject', invitationController.rejectInvitation);
-
 router.delete('/:invitationId', invitationController.cancelInvitation);
 
 export default router;
