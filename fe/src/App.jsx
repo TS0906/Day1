@@ -8,6 +8,7 @@ import Register from "./pages/register";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
 import Groups from "./pages/dashboard/Groups";
+import GroupDetail from "./pages/dashboard/groups/GroupDetail";
 import Money from "./pages/dashboard/Money";
 import TodosPage from "./pages/dashboard/todos/TodosPage";
 
@@ -44,6 +45,7 @@ export default function App() {
             <Route index element={<DashboardHome />} />
             <Route path="todos" element={<TodosPage />} />
             <Route path="groups" element={<Groups />} />
+            <Route path="groups/:groupId" element={<GroupDetail />} />
             <Route path="money" element={<Money />} />
           </Route>
 

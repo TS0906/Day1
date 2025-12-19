@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../../context/auth.context";
+import InvitationNotification from "./groups/invitations/InvitationNotification";
 import "./dashboard.css";
 export default function DashboardLayout(){
     const {user, logout} = useContext(AuthContext);
@@ -18,8 +19,9 @@ export default function DashboardLayout(){
             </aside>
              {/* Main */}
             <main className="main">
-                <header className="header">
+                <header className="header">        
                     <span>{user?.email}</span>
+                    <InvitationNotification />
                     <button onClick={logout}>Logout</button>
                 </header>
                 <section className="content">

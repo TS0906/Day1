@@ -38,6 +38,11 @@ export const checkGroupPermission = (requiredPermission) => async (req, res, nex
         const isOwner = group.ownerId.toString() === userId.toString();
         const isAdmin = req.user.role === USER_ROLES.ADMIN;
         if(isAdmin || isOwner) return next();
+        const isMember = group.members.some(m => m.toString() === userId.toString());
+        if(requiredPermission === 'isMember'){
+            if(isMember) return next();
+            return res.status(403).json({success: false, error: "Access denied: Not a group member"});
+        }
         const userPermission = group.permissions.find(p =>
             p.userId.toString() === userId.toString()
         );
