@@ -4,14 +4,12 @@ export const todoController = {
   createTodo: async (req, res) => {
     try {
       const result = await todoService.createTodo(req.body, req.user._id);
-
       if (!result.success) {
         return res.status(400).json({
           success: false,
           errors: result.errors || [],
         });
       }
-
       return res.status(201).json({
         success: true,
         data: result.data,
@@ -23,22 +21,19 @@ export const todoController = {
       });
     }
   },
-
   createGroupTodo: async (req, res) => {
     try {
       const result = await todoService.createGroupTodo(
         req.body,
-        req.params.groupId,
-        req.user._id
+        req.user._id,
+        req.params.groupId
       );
-
       if (!result.success) {
-        return res.status(403).json({
+        return res.status(400).json({
           success: false,
           errors: result.errors || [],
         });
       }
-
       return res.status(201).json({
         success: true,
         data: result.data,
@@ -50,7 +45,6 @@ export const todoController = {
       });
     }
   },
-
   getMyTodos: async (req, res) => {
     try {
       const page = Number(req.query.page) || 1;
@@ -80,16 +74,12 @@ export const todoController = {
       });
     }
   },
-
   getGroupTodos: async (req, res) => {
     try {
-      const result = await todoService.getGroupTodos(
-        req.params.groupId,
-        req.user._id
-      );
+      const result = await todoService.getTodosByGroup(req.params.groupId);
 
       if (!result.success) {
-        return res.status(403).json({
+        return res.status(400).json({
           success: false,
           errors: result.errors || [],
         });
@@ -124,19 +114,18 @@ export const todoController = {
           errors,
         });
       }
-
       return res.json({
         success: true,
         data: result.data,
       });
     } catch (error) {
+      console.error("updateTodo Error: ", error);
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
       });
     }
   },
-
   deleteTodo: async (req, res) => {
     try {
       const result = await todoService.deleteTodo(
@@ -182,7 +171,6 @@ export const todoController = {
           errors,
         });
       }
-
       return res.json({
         success: true,
         data: result.data,

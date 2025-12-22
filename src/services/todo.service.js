@@ -26,44 +26,36 @@ const createTodo = async (payload, userId) => {
     content,
     creatorId: userId,
     completed: false,
+    status: 'pending',
     groupId: null,
     isDeleted: false,
   });
-
   return { success: true, data: todo.toJSON() };
 };
 
-const createGroupTodo = async (payload, groupId, userId) => {
-  if (!ObjectId.isValid(groupId) || !ObjectId.isValid(userId)) {
-    return { success: false, errors: ["Invalid ID provided"] };
-  }
-
-  const allowed = await isGroupMember(groupId, userId);
-  if (!allowed) {
-    return { success: false, errors: ["Group not found or you are not a member"] };
-  }
-
-  const content = normalizeContent(payload);
-  if (!content) return { success: false, errors: ["Content is required"] };
-
-  const todo = await TodoModel.create({
-    content,
-    creatorId: userId,
-    completed: false,
-    groupId,
-    isDeleted: false,
-  });
-
-  return { success: true, data: todo.toJSON() };
+const createGroupTodo = async (todoData, userId, groupId) => {
+    try {
+      const content = normalizeContent(todoData);
+      if(!content) return {success: false, errors: ["Content is required"]};
+      const todo = await TodoModel.create({
+        content,
+        description: todoData.description || "",
+        creatorId: userId,
+        groupId: groupId, 
+        status: 'pending',
+        isDeleted: false,
+      });
+      return { success: true, data: todo };
+    } catch (error) {
+        throw error;
+    }
 };
 
 const getTodosByUserId = async (userId, page = 1, limit = 10) => {
   if (!ObjectId.isValid(userId)) {
     return { success: false, errors: ["Invalid user ID"] };
   }
-
   const skip = (page - 1) * limit;
-
   const query = {
     creatorId: userId,
     groupId: null,
@@ -77,7 +69,6 @@ const getTodosByUserId = async (userId, page = 1, limit = 10) => {
     .lean();
 
   const total = await TodoModel.countDocuments(query);
-
   return {
     success: true,
     data: {
@@ -90,44 +81,34 @@ const getTodosByUserId = async (userId, page = 1, limit = 10) => {
   };
 };
 
-const getGroupTodos = async (groupId, userId) => {
-  if (!ObjectId.isValid(groupId) || !ObjectId.isValid(userId)) {
-    return { success: false, errors: ["Invalid ID provided"] };
-  }
-
-  const allowed = await isGroupMember(groupId, userId);
-  if (!allowed) return { success: false, errors: ["Group not found or access denied"] };
-
-  const todos = await TodoModel.find({ groupId, isDeleted: false })
-    .sort({ createdAt: -1 })
-    .lean();
-
-  return { success: true, data: todos };
+const getTodosByGroup = async (groupId) => {
+    try {
+        const todos = await TodoModel.find({ groupId, isDeleted: false })
+            .sort({ createdAt: -1 })
+            .lean();
+        return { success: true, data: todos };
+    } catch (error) {
+        throw error;
+    }
 };
 
 const updateTodo = async (todoId, payload, userId, userRole) => {
   if (!ObjectId.isValid(todoId)) {
     return { success: false, errors: ["Invalid todo id"] };
   }
-
   const todo = await TodoModel.findOne({
     _id: todoId,
     isDeleted: false,
   });
-
   if (!todo) {
     return { success: false, errors: ["Todo not found"] };
   }
-
   const isOwner = todo.creatorId.toString() === userId.toString();
   const isAdmin = userRole === USER_ROLES.ADMIN;
-
   if (!isOwner && !isAdmin) {
     return { success: false, errors: ["Permission denied"] };
   }
-
   const updateFields = {};
-
   if (payload.content !== undefined) {
     const content = String(payload.content).trim();
     if (!content) {
@@ -137,22 +118,21 @@ const updateTodo = async (todoId, payload, userId, userRole) => {
   }
   if (payload.completed !== undefined) {
     updateFields.status = payload.completed ? "completed" : "pending";
+    updateFields.completed = payload.completed;
   } else if (payload.status !== undefined){
     updateFields.status = payload.status;
+    updateFields.completed = payload.status === "completed";
   }
   if (Object.keys(updateFields).length === 0) {
     return { success: false, errors: ["Nothing to update"] };
   }
-
   const updated = await TodoModel.findByIdAndUpdate(
     todoId,
     { $set: updateFields },
     { new: true }
   );
-
   return { success: true, data: updated };
 };
-
 const getTodoById = async (todoId, userId, userRole) => {
   if (!ObjectId.isValid(todoId)) {
     return { success: false, errors: ["Invalid ID provided"] };
@@ -197,8 +177,9 @@ export const todoService = {
   createTodo,
   createGroupTodo,
   getTodosByUserId,
-  getGroupTodos,
+  createGroupTodo,
+  getTodosByGroup,
   updateTodo,
   getTodoById,
-  deleteTodo,
+  deleteTodo, 
 };

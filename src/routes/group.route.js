@@ -1,5 +1,6 @@
 import express from 'express';
 import  {groupController}  from '../controllers/group.controller.js';
+import { todoController } from '../controllers/todo.controller.js';
 import { authToken } from '../middlewares/auth.middleware.js';
 import { authorizeRole, checkGroupPermission } from '../middlewares/role.middleware.js';
 
@@ -17,5 +18,9 @@ router.post('/:groupId/leave', checkGroupPermission('isMember'), groupController
 router.post('/:groupId/permissions', checkGroupPermission('canSetPermission'), groupController.setGroupPermissions);
 
 router.get('/admin', authorizeRole(['admin']), groupController.getAllGroups);
+
+router.get('/:groupId/todos', checkGroupPermission('isMember'), todoController.getGroupTodos);
+
+router.post('/:groupId/todos', checkGroupPermission('canCreateTodo'), todoController.createGroupTodo);
 
 export default router;
