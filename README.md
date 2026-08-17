@@ -1,5 +1,5 @@
 
-# 🚀 Todo Group Management API
+# 🚀 Group Task Management API
 
 A comprehensive RESTful API built on Node.js/Express, utilizing MongoDB (Mongoose ODM) to manage collaborative groups and personal/group to-do lists, with detailed user authorization and granular permissions.
 
